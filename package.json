@@ -1,4 +1,7 @@
-{
+"scripts": {
+  "dev": "node server.js",
+  "start": "node server.js"
+}{
   "name": "clockflow-working-ready",
   "version": "1.0.0",
   "private": true,
