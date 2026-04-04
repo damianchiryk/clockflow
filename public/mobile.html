@@ -1,34 +1,43 @@
+
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ClockFlow PRO</title>
-  <link rel="stylesheet" href="/style.css" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClockFlow</title>
 </head>
 <body>
-  <div class="page">
-    <div class="card">
-      <div class="eyebrow">CLOCKFLOW</div>
-      <h1>Clock In / Out</h1>
+<h2>ClockFlow</h2>
 
-      <label for="employeeSelect">Employee</label>
-      <select id="employeeSelect"></select>
+<select id="emp">
+<option value="damian">Damian</option>
+</select>
 
-      <label for="pinInput">PIN</label>
-      <input id="pinInput" type="password" inputmode="numeric" placeholder="Enter PIN" />
+<input id="pin" placeholder="PIN"/>
 
-      <div class="site-note" id="siteNote"></div>
+<button onclick="clock('in')">IN</button>
+<button onclick="clock('out')">OUT</button>
 
-      <button class="btn btn-in" id="clockInBtn">Clock In</button>
-      <button class="btn btn-out" id="clockOutBtn">Clock Out</button>
+<p id="msg"></p>
 
-      <div id="message" class="message"></div>
+<a href="/admin.html">Admin</a>
 
-      <a class="link" href="/admin.html">Open Admin Panel</a>
-    </div>
-  </div>
+<script>
+function clock(action){
+  fetch('/api/clock',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      employeeId:document.getElementById('emp').value,
+      pin:document.getElementById('pin').value,
+      action
+    })
+  })
+  .then(r=>r.json())
+  .then(d=>{
+    document.getElementById('msg').innerText = JSON.stringify(d)
+  })
+}
+</script>
 
-  <script src="/mobile.js"></script>
 </body>
 </html>
