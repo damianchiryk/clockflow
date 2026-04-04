@@ -1,28 +1,32 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ClockFlow</title>
-<link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ClockFlow</title>
+  <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
-<div class="box">
-<h2>ClockFlow</h2>
+  <div class="page">
+    <div class="card">
+      <div class="eyebrow">CLOCKFLOW</div>
+      <h1>Clock In / Out</h1>
 
-<select id="user">
-<option>Damian</option>
-</select>
+      <label for="userSelect">Employee</label>
+      <select id="userSelect"></select>
 
-<input id="pin" placeholder="PIN" type="password"/>
+      <label for="pinInput">PIN</label>
+      <input id="pinInput" type="password" inputmode="numeric" placeholder="Enter PIN" />
 
-<button onclick="clock('in')" class="in">Clock In</button>
-<button onclick="clock('out')" class="out">Clock Out</button>
+      <button class="btn btn-in" id="clockInBtn">Clock In</button>
+      <button class="btn btn-out" id="clockOutBtn">Clock Out</button>
 
-<p id="msg"></p>
+      <div id="message" class="message"></div>
 
-<a href="/admin.html">Admin</a>
-</div>
+      <a class="link" href="/admin.html">Open Admin Panel</a>
+    </div>
+  </div>
 
-<script src="app.js"></script>
+  <script src="/app.js"></script>
 </body>
 </html>

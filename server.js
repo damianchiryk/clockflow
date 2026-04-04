@@ -1,67 +1,94 @@
 const express = require('express');
 const path = require('path');
-const fs = require('fs');
 
 const app = express();
-
-app.use(express.json());
-
-// 🔥 TO MUSI BYĆ
-app.use(express.static(path.join(__dirname, 'public')));
-
 const PORT = process.env.PORT || 3000;
 
-// ===== ROUTING =====
+// ===== basic middleware =====
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
 
-// główna strona
+// ===== temporary in-memory data =====
+// This version is built to work reliably on Railway immediately.
+// Data will reset after a restart/redeploy.
+const users = [
+  { id: 'damian', name: 'Damian', pin: '1234' },
+  { id: 'james', name: 'James', pin: '2222' },
+  { id: 'craig', name: 'Craig', pin: '3333' }
+];
+
+const logs = [];
+
+// ===== pages =====
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'mobile.html'));
+  res.redirect('/mobile.html');
 });
 
-// admin
 app.get('/admin', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+  res.redirect('/admin.html');
 });
 
-// ===== DATA =====
+// ===== api =====
+app.get('/api/users', (req, res) => {
+  res.json(users.map(({ id, name }) => ({ id, name })));
+});
 
-const logsFile = path.join(__dirname, 'data', 'logs.json');
+app.get('/api/logs', (req, res) => {
+  res.json([...logs].reverse());
+});
 
-function readLogs() {
-  if (!fs.existsSync(logsFile)) return [];
-  return JSON.parse(fs.readFileSync(logsFile));
-}
+app.post('/api/clock', (req, res) => {
+  const { userId, pin, action } = req.body || {};
 
-function writeLogs(data) {
-  fs.writeFileSync(logsFile, JSON.stringify(data, null, 2));
-}
+  if (!userId || !pin || !action) {
+    return res.status(400).json({ error: 'Missing userId, pin or action' });
+  }
 
-// ===== CLOCK =====
+  if (!['in', 'out'].includes(action)) {
+    return res.status(400).json({ error: 'Action must be in or out' });
+  }
 
-app.post('/clock', (req, res) => {
-  const { name, action } = req.body;
+  const user = users.find(u => u.id === userId);
+  if (!user) {
+    return res.status(404).json({ error: 'User not found' });
+  }
 
-  const logs = readLogs();
+  if (String(user.pin) !== String(pin)) {
+    return res.status(401).json({ error: 'Invalid PIN' });
+  }
 
-  logs.push({
-    name,
+  const now = new Date();
+  const entry = {
+    id: Date.now().toString(),
+    userId: user.id,
+    name: user.name,
     action,
-    time: new Date().toISOString()
+    time: now.toISOString(),
+    localTime: now.toLocaleString('en-GB', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    })
+  };
+
+  logs.push(entry);
+
+  res.json({
+    success: true,
+    message: `${user.name} clocked ${action}`,
+    entry
   });
-
-  writeLogs(logs);
-
-  res.json({ success: true });
 });
 
-// ===== LOGS =====
-
-app.get('/logs', (req, res) => {
-  res.json(readLogs());
+// ===== health =====
+app.get('/health', (req, res) => {
+  res.status(200).send('OK');
 });
 
-// ===== START =====
-
-app.listen(PORT, () => {
-  console.log(`ClockFlow running on port ${PORT}`);
+// ===== start =====
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`ClockFlow running on 0.0.0.0:${PORT}`);
 });

@@ -1,22 +1,43 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin</title>
-<link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ClockFlow Admin</title>
+  <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
-<div class="box">
-<h2>Admin Panel</h2>
-<pre id="logs"></pre>
-</div>
+  <div class="page">
+    <div class="card admin-card">
+      <div class="admin-header">
+        <div>
+          <div class="eyebrow">CLOCKFLOW</div>
+          <h1>Admin Panel</h1>
+        </div>
+        <button class="btn btn-refresh" id="refreshBtn">Refresh</button>
+      </div>
 
-<script>
-fetch('/logs')
-.then(r => r.json())
-.then(data => {
-  document.getElementById('logs').innerText = JSON.stringify(data, null, 2);
-});
-</script>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Action</th>
+              <th>Time</th>
+            </tr>
+          </thead>
+          <tbody id="logsBody">
+            <tr>
+              <td colspan="3">No logs yet</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <a class="link" href="/mobile.html">Back to Mobile</a>
+    </div>
+  </div>
+
+  <script src="/admin.js"></script>
 </body>
 </html>
