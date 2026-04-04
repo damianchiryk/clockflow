@@ -1,16 +1,15 @@
-
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
 const app = express();
-const PORT = 4000;
+const PORT = process.env.PORT || 4000;
 const DB_FILE = path.join(__dirname, 'data', 'db.json');
 const sessions = new Map();
 
 app.use(express.json());
-app.use('/static', express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public')));
 
 function defaultDb() {
   return {
@@ -115,7 +114,7 @@ function distanceMeters(lat1, lon1, lat2, lon2) {
 function getOpenShift(events, userId) {
   const list = events
     .filter(e => e.userId === userId)
-    .sort((a,b) => new Date(a.createdAt) - new Date(b.createdAt));
+    .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
   let open = null;
   for (const ev of list) {
     if (ev.type === 'CLOCK_IN') open = ev;
@@ -129,7 +128,7 @@ function buildWeeklyReport(db) {
   for (const user of db.users.filter(u => u.role === 'EMPLOYEE' && u.active)) {
     const events = db.attendanceEvents
       .filter(e => e.userId === user.id)
-      .sort((a,b) => new Date(a.createdAt) - new Date(b.createdAt));
+      .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 
     let totalMs = 0;
     let lastIn = null;
@@ -166,11 +165,11 @@ function buildWeeklyReport(db) {
   };
 }
 
-app.get('/', (req,res) => res.redirect('/admin'));
-app.get('/admin', (req,res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
-app.get('/mobile', (req,res) => res.sendFile(path.join(__dirname, 'public', 'mobile.html')));
+app.get('/', (req, res) => res.redirect('/admin'));
+app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
+app.get('/mobile', (req, res) => res.sendFile(path.join(__dirname, 'public', 'mobile.html')));
 
-app.post('/api/auth/login', (req,res) => {
+app.post('/api/auth/login', (req, res) => {
   const db = dbRead();
   const { login, password } = req.body || {};
   const user = db.users.find(u => u.login === login && u.password === password && u.active);
@@ -180,7 +179,7 @@ app.post('/api/auth/login', (req,res) => {
   res.json({ token, user: sanitizeUser(user) });
 });
 
-app.post('/api/auth/change-password', auth, (req,res) => {
+app.post('/api/auth/change-password', auth, (req, res) => {
   const db = dbRead();
   const user = db.users.find(u => u.id === req.user.id);
   if (!user) return res.status(404).json({ error: 'User not found' });
@@ -193,28 +192,28 @@ app.post('/api/auth/change-password', auth, (req,res) => {
   res.json({ success: true, user: sanitizeUser(user) });
 });
 
-app.get('/api/me', auth, (req,res) => {
+app.get('/api/me', auth, (req, res) => {
   const db = dbRead();
   const user = db.users.find(u => u.id === req.user.id);
   const site = db.sites.find(s => s.id === user.siteId) || null;
   res.json({ user: sanitizeUser(user), site });
 });
 
-app.get('/api/sites', auth, (req,res) => {
+app.get('/api/sites', auth, (req, res) => {
   res.json(dbRead().sites);
 });
 
-app.get('/api/attendance/me', auth, (req,res) => {
+app.get('/api/attendance/me', auth, (req, res) => {
   const db = dbRead();
   res.json(
     db.attendanceEvents
       .filter(e => e.userId === req.user.id)
-      .sort((a,b) => b.createdAt.localeCompare(a.createdAt))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
       .slice(0, 50)
   );
 });
 
-app.post('/api/attendance/punch', auth, (req,res) => {
+app.post('/api/attendance/punch', auth, (req, res) => {
   const db = dbRead();
   const user = db.users.find(u => u.id === req.user.id);
   const site = db.sites.find(s => s.id === user.siteId);
@@ -249,7 +248,7 @@ app.post('/api/attendance/punch', auth, (req,res) => {
   res.json({ success: true, event });
 });
 
-app.get('/api/admin/dashboard', auth, adminOnly, (req,res) => {
+app.get('/api/admin/dashboard', auth, adminOnly, (req, res) => {
   const db = dbRead();
   const employees = db.users.filter(u => u.role === 'EMPLOYEE' && u.active);
   const activeNow = employees.filter(u => getOpenShift(db.attendanceEvents, u.id)).length;
@@ -264,7 +263,7 @@ app.get('/api/admin/dashboard', auth, adminOnly, (req,res) => {
   });
 });
 
-app.get('/api/admin/employees', auth, adminOnly, (req,res) => {
+app.get('/api/admin/employees', auth, adminOnly, (req, res) => {
   const db = dbRead();
   const rows = db.users.filter(u => u.role === 'EMPLOYEE').map(u => ({
     ...sanitizeUser(u),
@@ -274,7 +273,7 @@ app.get('/api/admin/employees', auth, adminOnly, (req,res) => {
   res.json(rows);
 });
 
-app.post('/api/admin/employees', auth, adminOnly, (req,res) => {
+app.post('/api/admin/employees', auth, adminOnly, (req, res) => {
   const { fullName, siteId, hourlyRate, lunchMinutes, minimumDailyMinutes, geofenceBypass } = req.body || {};
   if (!fullName || !siteId) return res.status(400).json({ error: 'fullName and siteId are required' });
   const db = dbRead();
@@ -305,13 +304,11 @@ app.post('/api/admin/employees', auth, adminOnly, (req,res) => {
   res.json({ success: true, generatedCredentials: { login, tempPassword }, employee: sanitizeUser(employee) });
 });
 
-app.get('/api/admin/payroll/weekly', auth, adminOnly, (req,res) => {
+app.get('/api/admin/payroll/weekly', auth, adminOnly, (req, res) => {
   res.json(buildWeeklyReport(dbRead()));
 });
 
 ensureDb();
 app.listen(PORT, () => {
-  console.log(`ClockFlow running on http://localhost:${PORT}`);
-  console.log(`Admin:  http://localhost:${PORT}/admin`);
-  console.log(`Mobile: http://localhost:${PORT}/mobile`);
+  console.log(`ClockFlow running on port ${PORT}`);
 });
