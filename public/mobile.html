@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ClockFlow Mobile</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div class="wrap">
+    <div class="card mobile-card">
+      <div class="logo">ClockFlow</div>
+      <h1>Clock In / Out</h1>
+
+      <label>Employee</label>
+      <select id="userSelect"></select>
+
+      <label>PIN</label>
+      <input id="pinInput" type="password" inputmode="numeric" placeholder="Enter PIN" />
+
+      <div class="button-row">
+        <button class="btn btn-in" id="clockInBtn">Clock In</button>
+        <button class="btn btn-out" id="clockOutBtn">Clock Out</button>
+      </div>
+
+      <div id="message" class="message"></div>
+
+      <a class="admin-link" href="/admin.html">Open Admin Panel</a>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

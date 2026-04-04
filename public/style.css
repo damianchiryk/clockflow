@@ -1,0 +1,119 @@
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  background: linear-gradient(180deg, #0f172a, #111827);
+  color: #f9fafb;
+}
+.wrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.card {
+  width: 100%;
+  max-width: 520px;
+  background: rgba(17, 24, 39, 0.95);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+}
+.admin-card { max-width: 900px; }
+.logo {
+  font-size: 14px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #93c5fd;
+  margin-bottom: 10px;
+}
+h1 {
+  margin: 0 0 20px;
+  font-size: 30px;
+}
+label {
+  display: block;
+  margin: 14px 0 8px;
+  font-size: 14px;
+  color: #d1d5db;
+}
+select, input {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid #374151;
+  background: #0b1220;
+  color: #fff;
+  font-size: 16px;
+}
+.button-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 18px;
+}
+.btn {
+  border: 0;
+  border-radius: 14px;
+  padding: 14px 16px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.btn-in { background: #16a34a; color: #fff; }
+.btn-out { background: #dc2626; color: #fff; }
+.btn-refresh { background: #2563eb; color: #fff; }
+.message {
+  margin-top: 16px;
+  min-height: 28px;
+  font-size: 15px;
+}
+.admin-link {
+  display: inline-block;
+  margin-top: 18px;
+  color: #93c5fd;
+  text-decoration: none;
+}
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.table-wrap {
+  overflow-x: auto;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #0b1220;
+  border-radius: 16px;
+  overflow: hidden;
+}
+th, td {
+  padding: 14px;
+  border-bottom: 1px solid #1f2937;
+  text-align: left;
+}
+th {
+  color: #93c5fd;
+  background: #111827;
+}
+tr:last-child td { border-bottom: 0; }
+.badge-in, .badge-out {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.badge-in { background: rgba(22,163,74,.18); color: #86efac; }
+.badge-out { background: rgba(220,38,38,.18); color: #fca5a5; }
+@media (max-width: 640px) {
+  h1 { font-size: 26px; }
+  .button-row { grid-template-columns: 1fr; }
+  .topbar { flex-direction: column; align-items: stretch; }
+}
