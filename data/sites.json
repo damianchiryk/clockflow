@@ -1,0 +1,18 @@
+[
+  {
+    "id": "vrs-east-tilbury",
+    "name": "VRS East Tilbury",
+    "address": "91a, Thames Industrial Park, East Tilbury, Tilbury RM18 8RH",
+    "lat": 51.4848,
+    "lng": 0.4122,
+    "radiusMeters": 200
+  },
+  {
+    "id": "alk-grays",
+    "name": "ALK Bodyshop",
+    "address": "Unit 7, Cliffside Estate, Grays RM17 5XR",
+    "lat": 51.4704,
+    "lng": 0.3313,
+    "radiusMeters": 200
+  }
+]

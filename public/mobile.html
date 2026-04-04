@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ClockFlow</title>
+  <title>ClockFlow PRO</title>
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
@@ -12,11 +12,13 @@
       <div class="eyebrow">CLOCKFLOW</div>
       <h1>Clock In / Out</h1>
 
-      <label for="userSelect">Employee</label>
-      <select id="userSelect"></select>
+      <label for="employeeSelect">Employee</label>
+      <select id="employeeSelect"></select>
 
       <label for="pinInput">PIN</label>
       <input id="pinInput" type="password" inputmode="numeric" placeholder="Enter PIN" />
+
+      <div class="site-note" id="siteNote"></div>
 
       <button class="btn btn-in" id="clockInBtn">Clock In</button>
       <button class="btn btn-out" id="clockOutBtn">Clock Out</button>
@@ -27,6 +29,6 @@
     </div>
   </div>
 
-  <script src="/app.js"></script>
+  <script src="/mobile.js"></script>
 </body>
 </html>
