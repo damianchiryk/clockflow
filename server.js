@@ -1,33 +1,47 @@
-
 const express = require('express');
-const fs = require('fs');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
+
 app.use(express.json());
-app.use(express.static('public'));
+
+// 🔥 TO MUSI BYĆ
+app.use(express.static(path.join(__dirname, 'public')));
 
 const PORT = process.env.PORT || 3000;
 
-const usersPath = path.join(__dirname, 'data/users.json');
-const logsPath = path.join(__dirname, 'data/logs.json');
+// ===== ROUTING =====
 
-function readJSON(file) {
-  if (!fs.existsSync(file)) return [];
-  return JSON.parse(fs.readFileSync(file));
-}
-
-function writeJSON(file, data) {
-  fs.writeFileSync(file, JSON.stringify(data, null, 2));
-}
-
+// główna strona
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public/mobile.html'));
+  res.sendFile(path.join(__dirname, 'public', 'mobile.html'));
 });
+
+// admin
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
+
+// ===== DATA =====
+
+const logsFile = path.join(__dirname, 'data', 'logs.json');
+
+function readLogs() {
+  if (!fs.existsSync(logsFile)) return [];
+  return JSON.parse(fs.readFileSync(logsFile));
+}
+
+function writeLogs(data) {
+  fs.writeFileSync(logsFile, JSON.stringify(data, null, 2));
+}
+
+// ===== CLOCK =====
 
 app.post('/clock', (req, res) => {
   const { name, action } = req.body;
-  const logs = readJSON(logsPath);
+
+  const logs = readLogs();
 
   logs.push({
     name,
@@ -35,14 +49,19 @@ app.post('/clock', (req, res) => {
     time: new Date().toISOString()
   });
 
-  writeJSON(logsPath, logs);
+  writeLogs(logs);
+
   res.json({ success: true });
 });
 
+// ===== LOGS =====
+
 app.get('/logs', (req, res) => {
-  res.json(readJSON(logsPath));
+  res.json(readLogs());
 });
 
+// ===== START =====
+
 app.listen(PORT, () => {
-  console.log("ClockFlow running on port " + PORT);
+  console.log(`ClockFlow running on port ${PORT}`);
 });
