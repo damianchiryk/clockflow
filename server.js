@@ -4,21 +4,22 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-// Simple test route
 app.get('/health', (req, res) => {
-  res.send('OK');
+  res.status(200).send('OK');
 });
 
-// Example admin route
+app.get('/', (req, res) => {
+  res.send('ClockFlow online');
+});
+
 app.get('/admin', (req, res) => {
-  res.send('Admin page working');
+  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
-// Example mobile route
 app.get('/mobile', (req, res) => {
-  res.send('Mobile page working');
+  res.sendFile(path.join(__dirname, 'public', 'mobile.html'));
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log('Server running on port ' + PORT);
+  console.log(`Server running on port ${PORT}`);
 });
