@@ -208,16 +208,3 @@ tbody tr:last-child td {
   h1 { font-size: 24px; }
   .page { padding: 16px; }
 }
-
-
-#loginCard {
-  max-width: 520px;
-}
-
-#loginCard .btn-refresh {
-  margin-top: 18px;
-}
-
-#loginMessage {
-  margin-top: 12px;
-}

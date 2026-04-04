@@ -4,7 +4,6 @@ const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
@@ -104,27 +103,6 @@ function weekRangeMondayToSunday(inputDate = new Date()) {
   return { monday, sunday };
 }
 
-
-function formatLondon(date) {
-  return new Date(date).toLocaleString('en-GB', {
-    timeZone: 'Europe/London',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
-  });
-}
-
-function requireAdmin(req, res, next) {
-  const password = req.headers['x-admin-password'];
-  if (String(password || '') !== String(ADMIN_PASSWORD)) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-  next();
-}
-
 // pages
 app.get('/', (req, res) => res.redirect('/mobile.html'));
 app.get('/admin', (req, res) => res.redirect('/admin.html'));
@@ -132,26 +110,17 @@ app.get('/admin', (req, res) => res.redirect('/admin.html'));
 // health
 app.get('/health', (req, res) => res.status(200).send('OK'));
 
-app.post('/api/admin-login', (req, res) => {
-  const { password } = req.body || {};
-  if (String(password || '') !== String(ADMIN_PASSWORD)) {
-    return res.status(401).json({ error: 'Invalid admin password' });
-  }
-  res.json({ success: true });
-});
-
 // sites
-app.get('/api/sites', requireAdmin, (req, res) => {
+app.get('/api/sites', (req, res) => {
   res.json(readJson(SITES_FILE, []));
 });
 
 // employees
 app.get('/api/employees', (req, res) => {
-  const employees = readJson(EMPLOYEES_FILE, []);
-  res.json(employees.map(({ pin, ...rest }) => rest));
+  res.json(readJson(EMPLOYEES_FILE, []));
 });
 
-app.post('/api/employees', requireAdmin, (req, res) => {
+app.post('/api/employees', (req, res) => {
   const employees = readJson(EMPLOYEES_FILE, []);
   const {
     name,
@@ -185,7 +154,7 @@ app.post('/api/employees', requireAdmin, (req, res) => {
   res.json({ success: true, employee });
 });
 
-app.put('/api/employees/:id', requireAdmin, (req, res) => {
+app.put('/api/employees/:id', (req, res) => {
   const employees = readJson(EMPLOYEES_FILE, []);
   const idx = employees.findIndex(e => e.id === req.params.id);
   if (idx === -1) {
@@ -207,7 +176,7 @@ app.put('/api/employees/:id', requireAdmin, (req, res) => {
   res.json({ success: true, employee: next });
 });
 
-app.delete('/api/employees/:id', requireAdmin, (req, res) => {
+app.delete('/api/employees/:id', (req, res) => {
   let employees = readJson(EMPLOYEES_FILE, []);
   const before = employees.length;
   employees = employees.filter(e => e.id !== req.params.id);
@@ -272,7 +241,14 @@ app.post('/api/clock', (req, res) => {
     siteId: employee.siteId,
     action,
     time: now.toISOString(),
-    localTime: formatLondon(now),
+    localTime: now.toLocaleString('en-GB', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    }),
     lat: lat ?? null,
     lng: lng ?? null,
     geo
@@ -288,13 +264,13 @@ app.post('/api/clock', (req, res) => {
   });
 });
 
-app.get('/api/logs', requireAdmin, (req, res) => {
+app.get('/api/logs', (req, res) => {
   const logs = readJson(LOGS_FILE, []);
   res.json([...logs].reverse());
 });
 
 // payroll report
-app.get('/api/reports/weekly', requireAdmin, (req, res) => {
+app.get('/api/reports/weekly', (req, res) => {
   const employees = readJson(EMPLOYEES_FILE, []);
   const logs = readJson(LOGS_FILE, []);
   const { monday, sunday } = weekRangeMondayToSunday(new Date());

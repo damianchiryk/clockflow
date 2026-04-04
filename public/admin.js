@@ -1,64 +1,9 @@
-
 let sites = [];
 let employees = [];
 
-function getAdminPassword() {
-  return sessionStorage.getItem('adminPassword') || '';
-}
-
-function adminHeaders(extra = {}) {
-  return {
-    ...extra,
-    'x-admin-password': getAdminPassword()
-  };
-}
-
-function londonTime(value) {
-  return new Date(value).toLocaleString('en-GB', {
-    timeZone: 'Europe/London',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
-  });
-}
-
-async function login() {
-  const password = document.getElementById('adminPassword').value.trim();
-  const msg = document.getElementById('loginMessage');
-
-  const res = await fetch('/api/admin-login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ password })
-  });
-
-  const data = await res.json();
-
-  if (!res.ok) {
-    msg.style.color = '#ffb0a9';
-    msg.textContent = data.error || 'Login failed';
-    return;
-  }
-
-  sessionStorage.setItem('adminPassword', password);
-  document.getElementById('loginCard').style.display = 'none';
-  document.getElementById('adminContent').style.display = 'block';
-  msg.textContent = '';
-
-  await initAdmin();
-}
-
 async function fetchSites() {
-  const res = await fetch('/api/sites', {
-    headers: adminHeaders()
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Failed to load sites');
-
-  sites = data;
+  const res = await fetch('/api/sites');
+  sites = await res.json();
   const select = document.getElementById('empSite');
   select.innerHTML = `
     <option value="vrs-east-tilbury::VRS Mechanical">VRS Mechanical</option>
@@ -89,9 +34,7 @@ async function fetchEmployees() {
 }
 
 async function fetchLogs() {
-  const res = await fetch('/api/logs', {
-    headers: adminHeaders()
-  });
+  const res = await fetch('/api/logs');
   const logs = await res.json();
 
   const body = document.getElementById('logsBody');
@@ -105,19 +48,15 @@ async function fetchLogs() {
       <td>${log.name}</td>
       <td>${log.site || ''}</td>
       <td><span class="badge ${log.action}">${String(log.action).toUpperCase()}</span></td>
-      <td>${londonTime(log.time)}</td>
+      <td>${log.localTime || new Date(log.time).toLocaleString()}</td>
       <td>${log.geo?.required ? (log.geo.allowed ? `OK (${log.geo.distanceMeters ?? '-'}m)` : 'Blocked') : 'Bypass'}</td>
     </tr>
   `).join('');
 }
 
 async function fetchReport() {
-  const res = await fetch('/api/reports/weekly', {
-    headers: adminHeaders()
-  });
+  const res = await fetch('/api/reports/weekly');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Failed to load report');
-
   const report = data.report || [];
   const body = document.getElementById('reportBody');
 
@@ -159,9 +98,9 @@ async function addEmployee() {
 
   const res = await fetch('/api/employees', {
     method: 'POST',
-    headers: adminHeaders({
+    headers: {
       'Content-Type': 'application/json'
-    }),
+    },
     body: JSON.stringify({
       name,
       pin,
@@ -195,29 +134,15 @@ async function addEmployee() {
   await fetchReport();
 }
 
-document.getElementById('loginBtn').addEventListener('click', login);
 document.getElementById('addEmployeeBtn').addEventListener('click', addEmployee);
 document.getElementById('refreshLogsBtn').addEventListener('click', fetchLogs);
 document.getElementById('refreshReportBtn').addEventListener('click', fetchReport);
 
-async function initAdmin() {
+async function init() {
   await fetchSites();
   await fetchEmployees();
   await fetchLogs();
   await fetchReport();
 }
 
-window.addEventListener('DOMContentLoaded', async () => {
-  const saved = getAdminPassword();
-  if (saved) {
-    document.getElementById('loginCard').style.display = 'none';
-    document.getElementById('adminContent').style.display = 'block';
-    try {
-      await initAdmin();
-    } catch (e) {
-      sessionStorage.removeItem('adminPassword');
-      document.getElementById('loginCard').style.display = 'block';
-      document.getElementById('adminContent').style.display = 'none';
-    }
-  }
-});
+init();
