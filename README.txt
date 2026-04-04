@@ -1,1 +1,0 @@
-Run:\nchmod +x start.sh\n./start.sh\n\nAdmin: http://localhost:4000/admin\nMobile: http://localhost:4000/mobile\n\nLogins:\nadmin / Admin123!\ntest.anywhere / Test123!\n
