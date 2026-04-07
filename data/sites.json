@@ -1,17 +1,26 @@
 [
-{
-  "id": "vrs-east-tilbury",
-  "name": "VRS Bodyshop",
-  "lat": 51.47873004008197,
-  "lng": 0.4137913929600394,
-  "radiusMeters": 200
-},
   {
-  "id": "alk-grays",
-  "name": "ALK Bodyshop",
-  "address": "Unit 7, Cliffside Estate, Grays RM17 5XR",
-  "lat": 51.4838239,
-  "lng": 0.3094763,
-  "radiusMeters": 200
-}
+    "id": "vrs-mechanical",
+    "name": "VRS Mechanical",
+    "address": "91a, Thames Industrial Park, East Tilbury, Tilbury RM18 8RH",
+    "lat": 51.47873004008197,
+    "lng": 0.4137913929600394,
+    "radiusMeters": 200
+  },
+  {
+    "id": "vrs-east-tilbury",
+    "name": "VRS Bodyshop",
+    "address": "91a, Thames Industrial Park, East Tilbury, Tilbury RM18 8RH",
+    "lat": 51.47873004008197,
+    "lng": 0.4137913929600394,
+    "radiusMeters": 200
+  },
+  {
+    "id": "alk-grays",
+    "name": "ALK Bodyshop",
+    "address": "Unit 7, Cliffside Estate, Grays RM17 5XR",
+    "lat": 51.4838239,
+    "lng": 0.3094763,
+    "radiusMeters": 200
+  }
 ]

@@ -10,7 +10,7 @@ const PORT = process.env.PORT || 3000;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 const LONDON_TZ = 'Europe/London';
 
-app.use(express.json({ limit: '20mb' }));
+app.use(express.json({ limit: '35mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 const DATA_DIR = path.join(__dirname, 'data');
@@ -280,6 +280,22 @@ function ensureSeed() {
 
   const sites = readJson(SITES_FILE, []);
   let changedSites = false;
+  const requiredSites = [
+    { id: 'vrs-mechanical', name: 'VRS Mechanical', address: '91a, Thames Industrial Park, East Tilbury, Tilbury RM18 8RH', lat: 51.47873004008197, lng: 0.4137913929600394, radiusMeters: 200 },
+    { id: 'vrs-east-tilbury', name: 'VRS Bodyshop', address: '91a, Thames Industrial Park, East Tilbury, Tilbury RM18 8RH', lat: 51.47873004008197, lng: 0.4137913929600394, radiusMeters: 200 },
+    { id: 'alk-grays', name: 'ALK Bodyshop', address: 'Unit 7, Cliffside Estate, Grays RM17 5XR', lat: 51.4838239, lng: 0.3094763, radiusMeters: 200 }
+  ];
+  requiredSites.forEach(required => {
+    const existing = sites.find(s => s.id === required.id || s.name === required.name);
+    if (!existing) { sites.push(required); changedSites = true; return; }
+    if (!existing.address && required.address) { existing.address = required.address; changedSites = true; }
+    if ((!existing.lat && required.lat) || (!existing.lng && required.lng)) {
+      existing.lat = required.lat; existing.lng = required.lng; changedSites = true;
+    }
+    if (!existing.radiusMeters) { existing.radiusMeters = required.radiusMeters; changedSites = true; }
+    if (!existing.id) { existing.id = required.id; changedSites = true; }
+    if (!existing.name) { existing.name = required.name; changedSites = true; }
+  });
   sites.forEach(site => {
     if (site.address === undefined) { site.address = ''; changedSites = true; }
     site.lat = toNumber(site.lat, 0);
@@ -450,12 +466,13 @@ app.post('/api/mobile/upload-document', (req, res) => {
   const employee = employees[idx];
   if (String(employee.pin) !== String(pin || '')) return res.status(401).json({ error: 'Invalid PIN' });
   if (!base64 || !fileName) return res.status(400).json({ error: 'Missing file data' });
+  const cleanBase64 = String(base64).includes(',') ? String(base64).split(',').pop() : String(base64);
 
   const ext = path.extname(fileName) || '';
   const finalName = `${safeFilePart(employee.id)}-${Date.now()}-${safeFilePart(docType || 'document')}${ext}`;
   const employeeDir = path.join(UPLOADS_DIR, safeFilePart(employee.id));
   ensureDir(employeeDir);
-  fs.writeFileSync(path.join(employeeDir, finalName), Buffer.from(String(base64), 'base64'));
+  fs.writeFileSync(path.join(employeeDir, finalName), Buffer.from(cleanBase64, 'base64'));
 
   const doc = {
     id: uid(),

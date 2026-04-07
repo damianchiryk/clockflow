@@ -47,6 +47,20 @@ function renderDocsList() {
     ? `Uploaded: ${docs.map(d => `${d.docType} (${d.fileName})`).join(', ')}`
     : 'No uploaded documents yet.';
 }
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result || '');
+      const comma = result.indexOf(',');
+      resolve(comma >= 0 ? result.slice(comma + 1) : result);
+    };
+    reader.onerror = () => reject(new Error('Failed to read file'));
+    reader.readAsDataURL(file);
+  });
+}
+
 function getCurrentPositionAsync() {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
@@ -160,7 +174,7 @@ async function uploadDocument() {
     return;
   }
   const docType = document.getElementById('docTypeSelect').value;
-  const base64 = await file.arrayBuffer().then(buf => btoa(String.fromCharCode(...new Uint8Array(buf))));
+  const base64 = await fileToBase64(file);
   try {
     const res = await fetch('/api/mobile/upload-document', {
       method: 'POST',
