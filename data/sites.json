@@ -7,11 +7,11 @@
   "radiusMeters": 200
 },
   {
-    "id": "alk-grays",
-    "name": "ALK Bodyshop",
-    "address": "Unit 7, Cliffside Estate, Grays RM17 5XR",
-    "lat": 51.4704,
-    "lng": 0.3313,
-    "radiusMeters": 200
-  }
+  "id": "alk-grays",
+  "name": "ALK Bodyshop",
+  "address": "Unit 7, Cliffside Estate, Grays RM17 5XR",
+  "lat": 51.4838239,
+  "lng": 0.3094763,
+  "radiusMeters": 200
+}
 ]
