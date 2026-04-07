@@ -209,27 +209,33 @@ tbody tr:last-child td {
   .page { padding: 16px; }
 }
 
-.btn-muted {
-  background: #5c6478;
+
+#loginCard {
+  max-width: 520px;
 }
-.button-inline {
-  display:flex;
-  gap:12px;
-  flex-wrap:wrap;
-  align-items:center;
+
+#loginCard .btn-refresh {
+  margin-top: 18px;
 }
-.button-inline .btn { width:auto; margin-top:0; padding:14px 16px; font-size:15px; }
-.button-inline select { max-width: 240px; }
-.status-open { color:#8ff0a4; font-weight:700; }
-.status-closed { color:#c6d7ff; }
-.action-links button {
-  margin: 0 6px 0 0;
-  border: 0;
-  background: #3d72f4;
-  color: white;
-  border-radius: 8px;
-  padding: 8px 10px;
-  cursor: pointer;
+
+#loginMessage {
+  margin-top: 12px;
 }
-.action-links button.delete-btn { background:#f05252; }
-.small-input { max-width:180px; }
+
+
+.export-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.export-actions .btn-refresh {
+  margin-top: 0;
+}
+
+@media (max-width: 640px) {
+  .export-actions {
+    flex-direction: column;
+  }
+}
+

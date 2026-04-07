@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ClockFlow Admin</title>
   <link rel="stylesheet" href="/style.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
   <div class="page admin-page">
@@ -16,6 +15,19 @@
       <input id="adminPassword" type="password" placeholder="Enter admin password" />
       <button class="btn btn-refresh" id="loginBtn" style="margin-top:18px;">Login</button>
       <div class="message" id="loginMessage"></div>
+
+      <div class="panel" style="margin-top:24px;">
+        <div class="admin-header">
+          <h2 style="margin:0;">Backup / Export</h2>
+        </div>
+        <div class="export-actions">
+          <button class="btn btn-refresh" id="exportEmployeesBtn">Export employees.json</button>
+          <button class="btn btn-refresh" id="exportLogsBtn">Export logs.json</button>
+          <button class="btn btn-refresh" id="exportSitesBtn">Export sites.json</button>
+          <button class="btn btn-refresh" id="exportAllBtn">Export full backup</button>
+        </div>
+      </div>
+
       <a class="link" href="/mobile.html">Back to Mobile</a>
     </div>
 
@@ -25,8 +37,7 @@
 
       <div class="admin-grid">
         <div class="panel">
-          <h2 id="employeeFormTitle">Add / Edit Employee</h2>
-          <input type="hidden" id="empId" />
+          <h2>Add Employee</h2>
           <label>Name</label>
           <input id="empName" type="text" placeholder="Full name" />
 
@@ -36,14 +47,7 @@
           <label>Site</label>
           <select id="empSite"></select>
 
-          <label>Pay type</label>
-          <select id="empCompType">
-            <option value="hourly">Hourly</option>
-            <option value="daily">Daily</option>
-            <option value="weekly">Weekly</option>
-          </select>
-
-          <label>Rate (£)</label>
+          <label>Hourly rate (£)</label>
           <input id="empRate" type="number" step="0.01" placeholder="0.00" />
 
           <label>Lunch minutes</label>
@@ -54,81 +58,25 @@
             <label class="check"><input id="empIsAdmin" type="checkbox" /> Admin profile</label>
           </div>
 
-          <div class="button-inline">
-            <button class="btn btn-refresh" id="saveEmployeeBtn">Save employee</button>
-            <button class="btn btn-muted" id="cancelEmployeeBtn" type="button">Clear</button>
-          </div>
+          <button class="btn btn-refresh" id="addEmployeeBtn">Create employee</button>
           <div class="message" id="adminMessage"></div>
         </div>
 
         <div class="panel">
-          <div class="admin-header">
-            <h2 style="margin:0;">Employees</h2>
-            <button class="btn btn-refresh" id="refreshEmployeesBtn">Refresh</button>
-          </div>
+          <h2>Employees</h2>
           <div class="table-wrap">
             <table>
               <thead>
                 <tr>
                   <th>Name</th>
                   <th>Site</th>
-                  <th>Pay</th>
+                  <th>Rate</th>
                   <th>Lunch</th>
                   <th>Geo</th>
-                  <th>Action</th>
                 </tr>
               </thead>
               <tbody id="employeesBody">
-                <tr><td colspan="6">No employees</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <div class="admin-grid" style="margin-top:24px;">
-        <div class="panel">
-          <h2 id="manualFormTitle">Manual Clock Entry</h2>
-          <input type="hidden" id="manualLogId" />
-          <label>Employee</label>
-          <select id="manualEmployee"></select>
-          <label>Action</label>
-          <select id="manualAction">
-            <option value="in">Clock In</option>
-            <option value="out">Clock Out</option>
-          </select>
-          <label>Date</label>
-          <input id="manualDate" type="date" />
-          <label>Time</label>
-          <input id="manualTime" type="time" />
-          <label>Notes</label>
-          <input id="manualNotes" type="text" placeholder="Optional note" />
-          <div class="button-inline">
-            <button class="btn btn-refresh" id="saveManualBtn">Save entry</button>
-            <button class="btn btn-muted" id="cancelManualBtn" type="button">Clear</button>
-          </div>
-          <div class="message" id="manualMessage"></div>
-        </div>
-
-        <div class="panel">
-          <div class="admin-header">
-            <h2 style="margin:0;">Today's Dashboard</h2>
-            <button class="btn btn-refresh" id="refreshDashboardBtn">Refresh</button>
-          </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Site</th>
-                  <th>Hours</th>
-                  <th>Status</th>
-                  <th>First in</th>
-                  <th>Last out</th>
-                </tr>
-              </thead>
-              <tbody id="dashboardBody">
-                <tr><td colspan="6">No data</td></tr>
+                <tr><td colspan="5">No employees</td></tr>
               </tbody>
             </table>
           </div>
@@ -140,6 +88,7 @@
           <h2 style="margin:0;">Logs</h2>
           <button class="btn btn-refresh" id="refreshLogsBtn">Refresh</button>
         </div>
+
         <div class="table-wrap">
           <table>
             <thead>
@@ -149,35 +98,10 @@
                 <th>Action</th>
                 <th>Time</th>
                 <th>GPS</th>
-                <th>Source</th>
-                <th>Action</th>
               </tr>
             </thead>
             <tbody id="logsBody">
-              <tr><td colspan="7">No logs yet</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="panel" style="margin-top:24px;">
-        <div class="admin-header">
-          <h2 style="margin:0;">Failed Attempts</h2>
-          <button class="btn btn-refresh" id="refreshFailedBtn">Refresh</button>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Reason</th>
-                <th>Action</th>
-                <th>Time</th>
-                <th>GPS</th>
-              </tr>
-            </thead>
-            <tbody id="failedBody">
-              <tr><td colspan="5">No failed attempts</td></tr>
+              <tr><td colspan="5">No logs yet</td></tr>
             </tbody>
           </table>
         </div>
@@ -186,52 +110,46 @@
       <div class="panel" style="margin-top:24px;">
         <div class="admin-header">
           <h2 style="margin:0;">Weekly Payroll (Mon-Sun)</h2>
-          <div class="button-inline">
-            <select id="reportSiteFilter" style="max-width:220px;">
-              <option value="">All sites</option>
-              <option value="VRS Mechanical">VRS Mechanical</option>
-              <option value="VRS Bodyshop">VRS Bodyshop</option>
-              <option value="ALK Bodyshop">ALK Bodyshop</option>
-            </select>
-            <button class="btn btn-refresh" id="refreshReportBtn">Refresh</button>
-            <button class="btn btn-refresh" id="excelBtn">Excel</button>
-            <button class="btn btn-refresh" id="pdfBtn">PDF</button>
-          </div>
+          <button class="btn btn-refresh" id="refreshReportBtn">Refresh</button>
         </div>
+
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
                 <th>Name</th>
                 <th>Site</th>
-                <th>Type</th>
                 <th>Rate</th>
                 <th>Lunch</th>
                 <th>Hours</th>
                 <th>Paid</th>
-                <th>Total</th>
+                <th>Gross</th>
               </tr>
             </thead>
             <tbody id="reportBody">
-              <tr><td colspan="8">No report yet</td></tr>
+              <tr><td colspan="7">No report yet</td></tr>
             </tbody>
           </table>
         </div>
       </div>
 
+
       <div class="panel" style="margin-top:24px;">
         <div class="admin-header">
-          <h2 style="margin:0;">GPS Map</h2>
-          <button class="btn btn-refresh" id="refreshMapBtn">Refresh</button>
+          <h2 style="margin:0;">Backup / Export</h2>
         </div>
-        <div id="map" style="height:420px; border-radius:16px;"></div>
+        <div class="export-actions">
+          <button class="btn btn-refresh" id="exportEmployeesBtn">Export employees.json</button>
+          <button class="btn btn-refresh" id="exportLogsBtn">Export logs.json</button>
+          <button class="btn btn-refresh" id="exportSitesBtn">Export sites.json</button>
+          <button class="btn btn-refresh" id="exportAllBtn">Export full backup</button>
+        </div>
       </div>
 
       <a class="link" href="/mobile.html">Back to Mobile</a>
     </div>
   </div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="/admin.js"></script>
 </body>
 </html>

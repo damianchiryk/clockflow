@@ -4,10 +4,252 @@
     "name": "Damian",
     "pin": "1234",
     "site": "VRS Mechanical",
-    "siteId": "vrs-east-tilbury",
-    "hourlyRate": 0,
+    "siteId": "vrs-mechanical",
+    "payType": "hourly",
+    "hourlyRate": 12.12,
     "lunchMinutes": 0,
     "geoRequired": false,
     "isAdmin": true
+  },
+  {
+    "id": "marcin",
+    "name": "Marcin Grabowski",
+    "pin": "1234",
+    "site": "VRS Bodyshop",
+    "siteId": "vrs-bodyshop",
+    "payType": "hourly",
+    "hourlyRate": 14.40,
+    "lunchMinutes": 0,
+    "geoRequired": true
+  },
+  {
+    "id": "dawid",
+    "name": "Dawid Grabowski",
+    "pin": "1234",
+    "site": "VRS Bodyshop",
+    "siteId": "vrs-bodyshop",
+    "payType": "weekly",
+    "weeklyRate": 1000
+  },
+  {
+    "id": "nathan",
+    "name": "Nathan Anienzo",
+    "pin": "1234",
+    "site": "VRS Bodyshop",
+    "siteId": "vrs-bodyshop",
+    "payType": "hourly",
+    "hourlyRate": 29.09
+  },
+  {
+    "id": "max",
+    "name": "Max Gibbs",
+    "pin": "1234",
+    "site": "VRS Mechanical",
+    "siteId": "vrs-mechanical",
+    "payType": "weekly",
+    "weeklyRate": 750
+  },
+  {
+    "id": "sergiu",
+    "name": "Sergiu Antoci",
+    "pin": "1234",
+    "site": "VRS Mechanical",
+    "siteId": "vrs-mechanical",
+    "payType": "hourly",
+    "hourlyRate": 22.20
+  },
+  {
+    "id": "jacek",
+    "name": "Jacek Janiszewski",
+    "pin": "1234",
+    "site": "VRS Mechanical",
+    "siteId": "vrs-mechanical",
+    "payType": "hourly",
+    "hourlyRate": 20
+  },
+  {
+    "id": "jakub",
+    "name": "Jakub Chiryk",
+    "pin": "1234",
+    "site": "VRS Mechanical",
+    "siteId": "vrs-mechanical",
+    "payType": "hourly",
+    "hourlyRate": 9
+  },
+  {
+    "id": "hitesh",
+    "name": "Hitesh Chawda",
+    "pin": "1234",
+    "site": "VRS Bodyshop",
+    "siteId": "vrs-bodyshop",
+    "payType": "hourly",
+    "hourlyRate": 24
+  },
+  {
+    "id": "daniel",
+    "name": "Daniel Jackson",
+    "pin": "1234",
+    "site": "VRS Bodyshop",
+    "siteId": "vrs-bodyshop",
+    "payType": "hourly",
+    "hourlyRate": 20
+  },
+  {
+    "id": "konrad",
+    "name": "Konrad Dabrowski",
+    "pin": "1234",
+    "site": "VRS Bodyshop",
+    "siteId": "vrs-bodyshop",
+    "payType": "hourly",
+    "hourlyRate": 18
+  },
+  {
+    "id": "piotr",
+    "name": "Piotr Lejwoda",
+    "pin": "1234",
+    "site": "VRS Bodyshop",
+    "siteId": "vrs-bodyshop",
+    "payType": "hourly",
+    "hourlyRate": 22.20
+  },
+  {
+    "id": "barry",
+    "name": "Barry Anderson",
+    "pin": "1234",
+    "site": "VRS Bodyshop",
+    "siteId": "vrs-bodyshop",
+    "payType": "hourly",
+    "hourlyRate": 20
+  },
+  {
+    "id": "carlos",
+    "name": "Carlos Guimaraes",
+    "pin": "1234",
+    "site": "VRS Bodyshop",
+    "siteId": "vrs-bodyshop",
+    "payType": "hourly",
+    "hourlyRate": 16.96
+  },
+  {
+    "id": "mateusz",
+    "name": "Mateusz Dewor",
+    "pin": "1234",
+    "site": "VRS Bodyshop",
+    "siteId": "vrs-bodyshop",
+    "payType": "hourly",
+    "hourlyRate": 12.22
+  },
+  {
+    "id": "cameron",
+    "name": "Cameron Tassier-Chaplin",
+    "pin": "1234",
+    "site": "VRS Bodyshop",
+    "siteId": "vrs-bodyshop",
+    "payType": "daily",
+    "dailyRate": 100
+  },
+  {
+    "id": "wioleta1",
+    "name": "Wioleta Chiryk",
+    "pin": "1234",
+    "site": "VRS Mechanical",
+    "siteId": "vrs-mechanical",
+    "payType": "weekly",
+    "weeklyRate": 140
+  },
+  {
+    "id": "wioleta2",
+    "name": "Wioleta Chiryk",
+    "pin": "1234",
+    "site": "ALK Bodyshop",
+    "siteId": "alk-bodyshop",
+    "payType": "weekly",
+    "weeklyRate": 100
+  },
+  {
+    "id": "craig",
+    "name": "Craig Gower",
+    "pin": "1234",
+    "site": "VRS Bodyshop",
+    "siteId": "vrs-bodyshop",
+    "payType": "weekly",
+    "weeklyRate": 1150
+  },
+  {
+    "id": "yogesh",
+    "name": "Yogesh Pitrola",
+    "pin": "1234",
+    "site": "ALK Bodyshop",
+    "siteId": "alk-bodyshop",
+    "payType": "weekly",
+    "weeklyRate": 750
+  },
+  {
+    "id": "cristiano",
+    "name": "Cristiano De Souza",
+    "pin": "1234",
+    "site": "ALK Bodyshop",
+    "siteId": "alk-bodyshop",
+    "payType": "hourly",
+    "hourlyRate": 30,
+    "lunchMinutes": 60
+  },
+  {
+    "id": "alfie",
+    "name": "Alfie Phillips",
+    "pin": "1234",
+    "site": "ALK Bodyshop",
+    "siteId": "alk-bodyshop",
+    "payType": "hourly",
+    "hourlyRate": 12.21,
+    "lunchMinutes": 50
+  },
+  {
+    "id": "jethron",
+    "name": "Jethron Gulla",
+    "pin": "1234",
+    "site": "ALK Bodyshop",
+    "siteId": "alk-bodyshop",
+    "payType": "hourly",
+    "hourlyRate": 18.82,
+    "lunchMinutes": 60
+  },
+  {
+    "id": "jonas",
+    "name": "Jonas De Souza",
+    "pin": "1234",
+    "site": "ALK Bodyshop",
+    "siteId": "alk-bodyshop",
+    "payType": "hourly",
+    "hourlyRate": 7.55,
+    "lunchMinutes": 60
+  },
+  {
+    "id": "rob",
+    "name": "Rob Francis",
+    "pin": "1234",
+    "site": "ALK Bodyshop",
+    "siteId": "alk-bodyshop",
+    "payType": "hourly",
+    "hourlyRate": 30
+  },
+  {
+    "id": "maycon",
+    "name": "Maycon",
+    "pin": "1234",
+    "site": "ALK Bodyshop",
+    "siteId": "alk-bodyshop",
+    "payType": "hourly",
+    "hourlyRate": 20,
+    "lunchMinutes": 60
+  },
+  {
+    "id": "alex",
+    "name": "Alex",
+    "pin": "1234",
+    "site": "ALK Bodyshop",
+    "siteId": "alk-bodyshop",
+    "payType": "hourly",
+    "hourlyRate": 20
   }
 ]
