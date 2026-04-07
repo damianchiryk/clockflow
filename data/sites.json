@@ -5,7 +5,7 @@
     "address": "91a, Thames Industrial Park, East Tilbury, Tilbury RM18 8RH",
     "lat": 51.47873004008197,
     "lng": 0.4137913929600394,
-    "radiusMeters": 200
+    "radiusMeters": 50
   },
   {
     "id": "vrs-east-tilbury",
@@ -13,7 +13,7 @@
     "address": "91a, Thames Industrial Park, East Tilbury, Tilbury RM18 8RH",
     "lat": 51.47873004008197,
     "lng": 0.4137913929600394,
-    "radiusMeters": 200
+    "radiusMeters": 50
   },
   {
     "id": "alk-grays",
@@ -21,6 +21,6 @@
     "address": "Unit 7, Cliffside Estate, Grays RM17 5XR",
     "lat": 51.4838239,
     "lng": 0.3094763,
-    "radiusMeters": 200
+    "radiusMeters": 50
   }
 ]
