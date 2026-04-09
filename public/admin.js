@@ -1,15 +1,19 @@
 let sites = [];
 let employees = [];
 let logsCache = [];
+let failedCache = [];
+let dashboardCache = [];
+let reportCache = [];
+let documentsCache = [];
 let map;
-let logsPage = 1;
-let failedPage = 1;
+let mapLayers = [];
 
-function getAdminPassword() {
-  return sessionStorage.getItem('adminPassword') || localStorage.getItem('adminPassword') || '';
+function getAdminToken() {
+  return sessionStorage.getItem('adminToken') || localStorage.getItem('adminToken') || '';
 }
 function adminHeaders(extra = {}) {
-  return { ...extra, 'x-admin-password': getAdminPassword() };
+  const token = getAdminToken();
+  return token ? { ...extra, 'x-admin-token': token } : extra;
 }
 function londonTime(value) {
   return new Date(value).toLocaleString('en-GB', {
@@ -24,183 +28,304 @@ function dateForInput(value) {
 function timeForInput(value) {
   return new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(value));
 }
-function qs(id) { return document.getElementById(id); }
-function qsa(sel) { return document.querySelectorAll(sel); }
-function money(value) { return `£${Number(value || 0).toFixed(2)}`; }
-function setAdminMessage(text, ok = true) {
-  const el = qs('adminMessage');
+function showMessage(id, text, ok = false) {
+  const el = document.getElementById(id);
+  if (!el) return;
   el.style.color = ok ? '#8ff0a4' : '#ffb0a9';
   el.textContent = text;
 }
-function renderCardList(targetId, items, emptyText, renderer) {
-  const el = qs(targetId);
-  if (!el) return;
-  if (!items.length) {
-    el.innerHTML = `<div class="stack-empty">${emptyText}</div>`;
-    return;
-  }
-  el.innerHTML = items.map(renderer).join('');
-}
-function showAdminView(view) {
-  localStorage.setItem('clockflowAdminView', view);
-  qsa('.admin-view').forEach(el => el.classList.remove('active'));
-  qsa('.admin-nav-btn').forEach(el => el.classList.remove('active'));
-  const panel = qs(`view-${view}`);
-  if (panel) panel.classList.add('active');
-  const btn = document.querySelector(`.admin-nav-btn[data-view="${view}"]`);
-  if (btn) btn.classList.add('active');
-  if (view === 'map' && map) setTimeout(() => map.invalidateSize(), 120);
+function logoutAdmin() {
+  sessionStorage.removeItem('adminToken');
+  localStorage.removeItem('adminToken');
+  document.getElementById('loginCard').style.display = 'block';
+  document.getElementById('adminContent').style.display = 'none';
+  document.getElementById('adminPassword').value = '';
 }
 function clearEmployeeForm() {
-  qs('employeeFormTitle').textContent = 'Add / Edit Employee';
-  ['empId','empName','empLogin','empPin','empRate','empLunch','empAdvance'].forEach(id => qs(id).value = '');
-  qs('empCompType').value = 'hourly';
-  qs('empGeoRequired').checked = true;
-  qs('empIsAdmin').checked = false;
-  qs('empMustClock').checked = true;
-  qs('empMustChangePin').checked = false;
+  document.getElementById('employeeFormTitle').textContent = 'Add / Edit Employee';
+  document.getElementById('empId').value = '';
+  document.getElementById('empName').value = '';
+  document.getElementById('empLogin').value = '';
+  document.getElementById('empPin').value = '';
+  document.getElementById('empRate').value = '';
+  document.getElementById('empLunch').value = '';
+  document.getElementById('empAdvance').value = '';
+  document.getElementById('empCompType').value = 'hourly';
+  document.getElementById('empGeoRequired').checked = true;
+  document.getElementById('empMustClock').checked = true;
+  document.getElementById('empMustChangePin').checked = true;
+  document.getElementById('empIsAdmin').checked = false;
+  document.getElementById('adminMessage').textContent = '';
 }
 function clearManualForm() {
-  qs('manualFormTitle').textContent = 'Manual Clock Entry';
-  qs('manualLogId').value = '';
-  qs('manualAction').value = 'in';
-  qs('manualDate').value = new Date().toISOString().slice(0, 10);
-  qs('manualTime').value = new Date().toTimeString().slice(0, 5);
-  qs('manualNotes').value = '';
+  document.getElementById('manualFormTitle').textContent = 'Manual Clock Entry';
+  document.getElementById('manualLogId').value = '';
+  document.getElementById('manualAction').value = 'in';
+  document.getElementById('manualDate').value = dateForInput(new Date());
+  document.getElementById('manualTime').value = timeForInput(new Date()).slice(0, 5);
+  document.getElementById('manualNotes').value = '';
+  document.getElementById('manualMessage').textContent = '';
+}
+async function apiJson(url, options = {}) {
+  const res = await fetch(url, { ...options, headers: adminHeaders(options.headers || {}) });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Request failed');
+  return data;
+}
+function isMobileAdmin() {
+  return window.innerWidth <= 768;
+}
+function tokenQuery() {
+  const token = encodeURIComponent(getAdminToken());
+  return `adminToken=${token}`;
+}
+function setActiveView(view) {
+  document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+  const current = document.getElementById(`view-${view}`);
+  if (current) current.classList.add('active');
+  document.querySelectorAll('.admin-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.view === view));
+  localStorage.setItem('clockflowAdminView', view);
+  if (view === 'map') setTimeout(() => map?.invalidateSize(), 150);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function setupNavigation() {
+  document.querySelectorAll('.admin-tab').forEach(btn => {
+    btn.addEventListener('click', () => setActiveView(btn.dataset.view));
+  });
+  document.querySelectorAll('[data-view-target]').forEach(btn => {
+    btn.addEventListener('click', () => setActiveView(btn.dataset.viewTarget));
+  });
+}
+function cardRow(label, value, cls = '') {
+  return `<div class="card-row ${cls}"><span>${label}</span><strong>${value}</strong></div>`;
+}
+function cardActions(actions) {
+  return `<div class="card-actions">${actions.join('')}</div>`;
+}
+function employeeCard(e) {
+  return `
+    <div class="app-card">
+      <div class="app-card-title-row">
+        <div>
+          <div class="app-card-title">${e.name}</div>
+          <div class="small">${e.login || ''}${e.isAdmin ? ' • admin' : ''}</div>
+        </div>
+        <span class="pill ${e.mustClock === false ? 'pill-muted' : 'pill-blue'}">${e.mustClock === false ? 'No clock' : 'Clock'}</span>
+      </div>
+      ${cardRow('Site', e.site || '')}
+      ${cardRow('Pay', `${e.compensationType || 'hourly'} £${Number(e.compensationRate ?? 0).toFixed(2)}`)}
+      ${cardRow('Advance', `£${Number(e.advanceBalance || 0).toFixed(2)}`)}
+      ${cardActions([
+        `<button class="mini-btn" onclick="editEmployee('${e.id}')">Edit</button>`,
+        `<button class="mini-btn" onclick="viewDocuments('${e.id}')">Docs</button>`,
+        `<button class="mini-btn mini-btn-danger" onclick="deleteEmployee('${e.id}')">Delete</button>`
+      ])}
+    </div>`;
+}
+function dashboardCard(row) {
+  const status = row.mustClock === false ? 'No clock required' : row.currentlyClockedIn ? 'Clocked in' : 'Clocked out';
+  return `
+    <div class="app-card">
+      <div class="app-card-title-row">
+        <div class="app-card-title">${row.name}</div>
+        <span class="pill ${row.currentlyClockedIn ? 'pill-green' : 'pill-muted'}">${status}</span>
+      </div>
+      ${cardRow('Site', row.site || '')}
+      ${cardRow('Hours', Number(row.todayHours || 0).toFixed(2))}
+      ${row.firstIn ? cardRow('First in', row.firstIn) : ''}
+      ${row.lastOut ? cardRow('Last out', row.lastOut) : ''}
+    </div>`;
+}
+function logCard(log) {
+  return `
+    <div class="app-card">
+      <div class="app-card-title-row">
+        <div class="app-card-title">${log.name}</div>
+        <span class="pill ${log.action === 'in' ? 'pill-green' : 'pill-red'}">${String(log.action || '').toUpperCase()}</span>
+      </div>
+      ${cardRow('Site', log.site || '')}
+      ${cardRow('Time', londonTime(log.time))}
+      ${cardRow('GPS', log.geo?.required ? (log.geo.allowed ? `OK (${log.geo.distanceMeters ?? '-'}m)` : 'Blocked') : 'Bypass')}
+      ${cardRow('Source', log.source || 'mobile')}
+      ${cardActions([
+        `<button class="mini-btn" onclick="editLog('${log.id}')">Edit</button>`,
+        `<button class="mini-btn mini-btn-danger" onclick="deleteLog('${log.id}')">Delete</button>`
+      ])}
+    </div>`;
+}
+function failedCard(row) {
+  return `
+    <div class="app-card">
+      <div class="app-card-title">${row.name || 'Unknown'}</div>
+      ${cardRow('Reason', row.reason || '')}
+      ${cardRow('Action', row.action || '')}
+      ${cardRow('Time', londonTime(row.time))}
+      ${row.lat != null ? cardRow('GPS', `${row.lat}, ${row.lng}`) : ''}
+    </div>`;
+}
+function reportCard(row) {
+  return `
+    <div class="app-card">
+      <div class="app-card-title-row">
+        <div class="app-card-title">${row.name}</div>
+        <span class="pill pill-blue">£${Number(row.totalPay || 0).toFixed(2)}</span>
+      </div>
+      ${cardRow('Site', row.site)}
+      ${cardRow('Type', row.compensationType)}
+      ${cardRow('Rate', `£${Number(row.compensationRate || 0).toFixed(2)}`)}
+      ${cardRow('Hours', Number(row.paidHours || 0).toFixed(2))}
+      ${cardRow('Gross', `£${Number(row.grossPay || 0).toFixed(2)}`)}
+      ${cardRow('Advance', `£${Number(row.advanceDeduction || 0).toFixed(2)}`)}
+    </div>`;
+}
+function docCard(employeeId, doc) {
+  return `
+    <div class="app-card">
+      <div class="app-card-title">${doc.fileName || ''}</div>
+      ${cardRow('Type', doc.docType || '')}
+      ${cardRow('Uploaded', doc.uploadedAtLocal || londonTime(doc.uploadedAt))}
+      <div class="card-actions"><a class="mini-btn" href="/api/employee-document/${employeeId}/${doc.id}?${tokenQuery()}" target="_blank">Open</a></div>
+    </div>`;
 }
 async function login() {
-  const password = qs('adminPassword').value.trim();
-  const msg = qs('loginMessage');
-  const res = await fetch('/api/admin-login', { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ password }) });
-  const data = await res.json();
-  if (!res.ok) {
-    msg.style.color = '#ffb0a9';
-    msg.textContent = data.error || 'Login failed';
-    return;
+  try {
+    const password = document.getElementById('adminPassword').value.trim();
+    const res = await fetch('/api/admin-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Login failed');
+    sessionStorage.setItem('adminToken', data.token);
+    localStorage.setItem('adminToken', data.token);
+    document.getElementById('loginCard').style.display = 'none';
+    document.getElementById('adminContent').style.display = 'block';
+    await initAdmin();
+  } catch (e) {
+    showMessage('loginMessage', e.message || 'Login failed');
   }
-  sessionStorage.setItem('adminPassword', password);
-  localStorage.setItem('adminPassword', password);
-  qs('loginCard').style.display = 'none';
-  qs('adminContent').style.display = 'block';
-  await initAdmin();
-  showAdminView(localStorage.getItem('clockflowAdminView') || 'dashboard');
 }
+
 async function fetchSites() {
-  const res = await fetch('/api/sites', { headers: adminHeaders() });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Failed to load sites');
-  sites = data;
-  qs('empSite').innerHTML = sites.map(s => `<option value="${s.id}::${s.name}">${s.name}</option>`).join('');
-  qs('reportSiteFilter').innerHTML = '<option value="">All sites</option>' + sites.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
+  sites = await apiJson('/api/sites');
+  const options = sites.map(site => `<option value="${site.id}::${site.name}">${site.name}</option>`).join('');
+  document.getElementById('empSite').innerHTML = options;
+  const filter = document.getElementById('reportSiteFilter');
+  filter.innerHTML = '<option value="">All sites</option>' + sites.map(site => `<option value="${site.name}">${site.name}</option>`).join('');
 }
 async function fetchEmployees() {
   const res = await fetch('/api/employees');
   employees = await res.json();
-  const body = qs('employeesBody');
-  qs('manualEmployee').innerHTML = employees.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
+  const body = document.getElementById('employeesBody');
+  const cards = document.getElementById('employeesCards');
+  const manual = document.getElementById('manualEmployee');
+  const docsEmployee = document.getElementById('docsEmployee');
+  const options = employees.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
+  manual.innerHTML = options;
+  docsEmployee.innerHTML = options;
   if (!employees.length) {
-    body.innerHTML = '<tr><td colspan="6">No employees</td></tr>';
-    renderCardList('employeesCards', [], 'No employees', () => '');
+    body.innerHTML = '<tr><td colspan="7">No employees</td></tr>';
+    cards.innerHTML = '<div class="empty-card">No employees</div>';
     return;
   }
   body.innerHTML = employees.map(e => `
     <tr>
       <td>${e.name}${e.isAdmin ? ' <span class="small">(admin)</span>' : ''}</td>
-      <td>${e.login || ''}</td>
+      <td>${e.login || ''}${e.mustChangePin ? ' <span class="small">(PIN change)</span>' : ''}</td>
       <td>${e.site}</td>
-      <td>${e.compensationType || e.payType || 'hourly'} ${money(e.compensationRate ?? e.hourlyRate ?? 0)}</td>
+      <td>${e.compensationType} £${Number(e.compensationRate ?? 0).toFixed(2)}</td>
       <td>${e.mustClock === false ? 'No' : 'Yes'}</td>
+      <td>£${Number(e.advanceBalance || 0).toFixed(2)}</td>
       <td class="action-links">
         <button onclick="editEmployee('${e.id}')">Edit</button>
+        <button onclick="viewDocuments('${e.id}')">Docs</button>
         <button class="delete-btn" onclick="deleteEmployee('${e.id}')">Delete</button>
       </td>
     </tr>
   `).join('');
-  renderCardList('employeesCards', employees, 'No employees', e => `
-    <div class="info-card">
-      <div class="info-card-title">${e.name}${e.isAdmin ? ' <span class="small">(admin)</span>' : ''}</div>
-      <div class="info-row"><span>Login</span><span>${e.login || '-'}</span></div>
-      <div class="info-row"><span>Site</span><span>${e.site || '-'}</span></div>
-      <div class="info-row"><span>Pay</span><span>${e.compensationType || e.payType || 'hourly'} ${money(e.compensationRate ?? e.hourlyRate ?? 0)}</span></div>
-      <div class="info-row"><span>Must clock</span><span>${e.mustClock === false ? 'No' : 'Yes'}</span></div>
-      <div class="info-actions">
-        <button class="btn btn-refresh slim-btn" onclick="editEmployee('${e.id}')">Edit</button>
-        <button class="btn btn-muted slim-btn" onclick="deleteEmployee('${e.id}')">Delete</button>
-      </div>
-    </div>
-  `);
+  cards.innerHTML = employees.map(employeeCard).join('');
 }
 function editEmployee(id) {
   const e = employees.find(x => x.id === id);
   if (!e) return;
-  qs('employeeFormTitle').textContent = 'Edit Employee';
-  qs('empId').value = e.id;
-  qs('empName').value = e.name || '';
-  qs('empLogin').value = e.login || '';
-  qs('empPin').value = '';
-  qs('empRate').value = Number(e.compensationRate ?? e.hourlyRate ?? 0);
-  qs('empLunch').value = Number(e.lunchMinutes || 0);
-  qs('empAdvance').value = Number(e.advanceBalance || 0);
-  qs('empCompType').value = e.compensationType || e.payType || 'hourly';
-  qs('empGeoRequired').checked = !!e.geoRequired;
-  qs('empIsAdmin').checked = !!e.isAdmin;
-  qs('empMustClock').checked = e.mustClock !== false;
-  qs('empMustChangePin').checked = !!e.mustChangePin;
-  qs('empSite').value = `${e.siteId}::${e.site}`;
-  showAdminView('add');
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  document.getElementById('employeeFormTitle').textContent = 'Edit Employee';
+  document.getElementById('empId').value = e.id;
+  document.getElementById('empName').value = e.name || '';
+  document.getElementById('empLogin').value = e.login || '';
+  document.getElementById('empPin').value = '';
+  document.getElementById('empRate').value = Number(e.compensationRate ?? e.hourlyRate ?? 0);
+  document.getElementById('empLunch').value = Number(e.lunchMinutes || 0);
+  document.getElementById('empAdvance').value = Number(e.advanceBalance || 0);
+  document.getElementById('empCompType').value = e.compensationType || 'hourly';
+  document.getElementById('empGeoRequired').checked = !!e.geoRequired;
+  document.getElementById('empMustClock').checked = e.mustClock !== false;
+  document.getElementById('empMustChangePin').checked = !!e.mustChangePin;
+  document.getElementById('empIsAdmin').checked = !!e.isAdmin;
+  document.getElementById('empSite').value = `${e.siteId}::${e.site}`;
+  setActiveView('employee-form');
 }
 async function saveEmployee() {
-  const id = qs('empId').value;
-  const siteValue = qs('empSite').value;
-  if (!qs('empName').value.trim() || !siteValue || (!id && !qs('empPin').value.trim())) return setAdminMessage('Please fill required fields', false);
+  const id = document.getElementById('empId').value;
+  const name = document.getElementById('empName').value.trim();
+  const login = document.getElementById('empLogin').value.trim();
+  const pin = document.getElementById('empPin').value.trim();
+  const siteValue = document.getElementById('empSite').value;
+  const rate = document.getElementById('empRate').value;
+  const lunch = document.getElementById('empLunch').value;
+  const advance = document.getElementById('empAdvance').value;
+  const compType = document.getElementById('empCompType').value;
+  const geoRequired = document.getElementById('empGeoRequired').checked;
+  const mustClock = document.getElementById('empMustClock').checked;
+  const mustChangePin = document.getElementById('empMustChangePin').checked;
+  const isAdmin = document.getElementById('empIsAdmin').checked;
+  if (!name || !siteValue || !login || (!id && !pin)) {
+    showMessage('adminMessage', 'Please fill required fields');
+    return;
+  }
   const [siteId, site] = siteValue.split('::');
   const payload = {
-    name: qs('empName').value.trim(),
-    login: qs('empLogin').value.trim(),
-    pin: qs('empPin').value.trim(),
-    site, siteId,
-    compensationType: qs('empCompType').value,
-    compensationRate: Number(qs('empRate').value || 0),
-    hourlyRate: Number(qs('empRate').value || 0),
-    lunchMinutes: Number(qs('empLunch').value || 0),
-    geoRequired: qs('empGeoRequired').checked,
-    isAdmin: qs('empIsAdmin').checked,
-    mustClock: qs('empMustClock').checked,
-    mustChangePin: qs('empMustChangePin').checked,
-    advanceBalance: Number(qs('empAdvance').value || 0)
+    name, login, site, siteId,
+    hourlyRate: Number(rate || 0),
+    compensationType: compType,
+    compensationRate: Number(rate || 0),
+    lunchMinutes: Number(lunch || 0),
+    advanceBalance: Number(advance || 0),
+    geoRequired, mustClock, mustChangePin, isAdmin
   };
+  if (pin) payload.pin = pin;
   const url = id ? `/api/employees/${id}` : '/api/employees';
   const method = id ? 'PUT' : 'POST';
-  const res = await fetch(url, { method, headers: adminHeaders({ 'Content-Type':'application/json' }), body: JSON.stringify(payload) });
-  const data = await res.json();
-  if (!res.ok) return setAdminMessage(data.error || 'Save failed', false);
-  setAdminMessage(id ? 'Employee updated' : 'Employee created', true);
-  clearEmployeeForm();
-  await fetchEmployees();
-  await fetchReport();
+  try {
+    await apiJson(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    showMessage('adminMessage', id ? 'Employee updated' : 'Employee created', true);
+    clearEmployeeForm();
+    await fetchEmployees();
+    await fetchReport();
+    setActiveView('employees');
+  } catch (e) {
+    showMessage('adminMessage', e.message || 'Save failed');
+  }
 }
 async function deleteEmployee(id) {
   if (!confirm('Delete this employee?')) return;
-  const res = await fetch(`/api/employees/${id}`, { method: 'DELETE', headers: adminHeaders() });
-  const data = await res.json();
-  if (!res.ok) return alert(data.error || 'Delete failed');
-  await fetchEmployees();
-  await fetchReport();
+  try {
+    await apiJson(`/api/employees/${id}`, { method: 'DELETE' });
+    await fetchEmployees();
+    await fetchReport();
+    await fetchDocuments();
+  } catch (e) {
+    alert(e.message || 'Delete failed');
+  }
 }
-async function fetchLogs(page = logsPage) {
-  logsPage = page;
-  const res = await fetch(`/api/logs?page=${page}`, { headers: adminHeaders() });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Failed to load logs');
-  logsCache = data.items || [];
-  qs('logsPageInfo').textContent = `Page ${data.pagination.page} of ${data.pagination.totalPages} • ${data.pagination.total} rows`;
-  qs('prevLogsBtn').disabled = !data.pagination.hasPrev;
-  qs('nextLogsBtn').disabled = !data.pagination.hasNext;
-  const body = qs('logsBody');
+
+async function fetchLogs() {
+  logsCache = await apiJson('/api/logs');
+  const body = document.getElementById('logsBody');
+  const cards = document.getElementById('logsCards');
   if (!logsCache.length) {
     body.innerHTML = '<tr><td colspan="7">No logs yet</td></tr>';
-    renderCardList('logsCards', [], 'No logs yet', () => '');
+    cards.innerHTML = '<div class="empty-card">No logs yet</div>';
     return;
   }
   body.innerHTML = logsCache.map(log => `
@@ -211,239 +336,310 @@ async function fetchLogs(page = logsPage) {
       <td>${londonTime(log.time)}</td>
       <td>${log.geo?.required ? (log.geo.allowed ? `OK (${log.geo.distanceMeters ?? '-'}m)` : 'Blocked') : 'Bypass'}</td>
       <td>${log.source || 'mobile'}</td>
-      <td class="action-links"><button onclick="editLog('${log.id}')">Edit</button><button class="delete-btn" onclick="deleteLog('${log.id}')">Delete</button></td>
-    </tr>`).join('');
-  renderCardList('logsCards', logsCache, 'No logs yet', log => `
-    <div class="info-card">
-      <div class="info-card-title">${log.name} <span class="badge ${log.action}">${String(log.action).toUpperCase()}</span></div>
-      <div class="info-row"><span>Site</span><span>${log.site || '-'}</span></div>
-      <div class="info-row"><span>Time</span><span>${londonTime(log.time)}</span></div>
-      <div class="info-row"><span>GPS</span><span>${log.geo?.required ? (log.geo.allowed ? `OK (${log.geo.distanceMeters ?? '-'}m)` : 'Blocked') : 'Bypass'}</span></div>
-      <div class="info-row"><span>Source</span><span>${log.source || 'mobile'}</span></div>
-      <div class="info-actions">
-        <button class="btn btn-refresh slim-btn" onclick="editLog('${log.id}')">Edit</button>
-        <button class="btn btn-muted slim-btn" onclick="deleteLog('${log.id}')">Delete</button>
-      </div>
-    </div>`);
+      <td class="action-links">
+        <button onclick="editLog('${log.id}')">Edit</button>
+        <button class="delete-btn" onclick="deleteLog('${log.id}')">Delete</button>
+      </td>
+    </tr>
+  `).join('');
+  cards.innerHTML = logsCache.map(logCard).join('');
 }
 function editLog(id) {
   const log = logsCache.find(x => x.id === id);
   if (!log) return;
-  qs('manualFormTitle').textContent = 'Edit Clock Entry';
-  qs('manualLogId').value = log.id;
-  qs('manualEmployee').value = log.employeeId;
-  qs('manualAction').value = log.action;
-  qs('manualDate').value = dateForInput(log.time);
-  qs('manualTime').value = timeForInput(log.time).slice(0,5);
-  qs('manualNotes').value = log.notes || '';
-  showAdminView('employees');
-  window.scrollTo({ top: 200, behavior: 'smooth' });
+  document.getElementById('manualFormTitle').textContent = 'Edit Clock Entry';
+  document.getElementById('manualLogId').value = log.id;
+  document.getElementById('manualEmployee').value = log.employeeId;
+  document.getElementById('manualAction').value = log.action;
+  document.getElementById('manualDate').value = dateForInput(log.time);
+  document.getElementById('manualTime').value = timeForInput(log.time).slice(0, 5);
+  document.getElementById('manualNotes').value = log.notes || '';
+  setActiveView('employee-form');
 }
 async function saveManualLog() {
-  const payload = { employeeId: qs('manualEmployee').value, action: qs('manualAction').value, date: qs('manualDate').value, time: qs('manualTime').value, notes: qs('manualNotes').value.trim() };
-  if (!payload.employeeId || !payload.action || !payload.date || !payload.time) {
-    qs('manualMessage').style.color = '#ffb0a9';
-    qs('manualMessage').textContent = 'Please fill all required fields';
+  const id = document.getElementById('manualLogId').value;
+  const employeeId = document.getElementById('manualEmployee').value;
+  const action = document.getElementById('manualAction').value;
+  const date = document.getElementById('manualDate').value;
+  const time = document.getElementById('manualTime').value;
+  const notes = document.getElementById('manualNotes').value.trim();
+  if (!employeeId || !action || !date || !time) {
+    showMessage('manualMessage', 'Please fill all required fields');
     return;
   }
-  const id = qs('manualLogId').value;
+  const payload = { employeeId, action, date, time, notes };
   const url = id ? `/api/logs/${id}` : '/api/manual-log';
   const method = id ? 'PUT' : 'POST';
-  const res = await fetch(url, { method, headers: adminHeaders({ 'Content-Type':'application/json' }), body: JSON.stringify(payload) });
-  const data = await res.json();
-  qs('manualMessage').style.color = res.ok ? '#8ff0a4' : '#ffb0a9';
-  qs('manualMessage').textContent = res.ok ? (id ? 'Entry updated' : 'Manual entry added') : (data.error || 'Save failed');
-  if (res.ok) {
+  try {
+    await apiJson(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    showMessage('manualMessage', id ? 'Entry updated' : 'Manual entry added', true);
     clearManualForm();
     await fetchLogs();
     await fetchDashboard();
     await fetchReport();
+    await initMap();
+    setActiveView('today');
+  } catch (e) {
+    showMessage('manualMessage', e.message || 'Save failed');
   }
 }
 async function deleteLog(id) {
   if (!confirm('Delete this log?')) return;
-  const res = await fetch(`/api/logs/${id}`, { method:'DELETE', headers: adminHeaders() });
-  const data = await res.json();
-  if (!res.ok) return alert(data.error || 'Delete failed');
-  await fetchLogs();
-  await fetchDashboard();
-  await fetchReport();
+  try {
+    await apiJson(`/api/logs/${id}`, { method: 'DELETE' });
+    await fetchLogs();
+    await fetchDashboard();
+    await fetchReport();
+    await initMap();
+  } catch (e) {
+    alert(e.message || 'Delete failed');
+  }
 }
-async function fetchFailedAttempts(page = failedPage) {
-  failedPage = page;
-  const res = await fetch(`/api/failed-attempts?page=${page}`, { headers: adminHeaders() });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Failed to load failed attempts');
-  qs('failedPageInfo').textContent = `Page ${data.pagination.page} of ${data.pagination.totalPages} • ${data.pagination.total} rows`;
-  qs('prevFailedBtn').disabled = !data.pagination.hasPrev;
-  qs('nextFailedBtn').disabled = !data.pagination.hasNext;
-  const body = qs('failedBody');
-  if (!data.items.length) {
+async function fetchFailedAttempts() {
+  failedCache = await apiJson('/api/failed-attempts');
+  const body = document.getElementById('failedBody');
+  const cards = document.getElementById('failedCards');
+  if (!failedCache.length) {
     body.innerHTML = '<tr><td colspan="5">No failed attempts</td></tr>';
-    renderCardList('failedCards', [], 'No failed attempts', () => '');
+    cards.innerHTML = '<div class="empty-card">No failed attempts</div>';
     return;
   }
-  body.innerHTML = data.items.map(row => `
+  body.innerHTML = failedCache.map(row => `
     <tr>
       <td>${row.name || ''}</td>
       <td>${row.reason || ''}</td>
       <td>${row.action || ''}</td>
       <td>${londonTime(row.time)}</td>
       <td>${row.lat != null ? `${row.lat}, ${row.lng}` : ''}</td>
-    </tr>`).join('');
-  renderCardList('failedCards', data.items, 'No failed attempts', row => `
-    <div class="info-card">
-      <div class="info-card-title">${row.name || 'Unknown'}</div>
-      <div class="info-row"><span>Reason</span><span>${row.reason || '-'}</span></div>
-      <div class="info-row"><span>Action</span><span>${row.action || '-'}</span></div>
-      <div class="info-row"><span>Time</span><span>${londonTime(row.time)}</span></div>
-      <div class="info-row"><span>GPS</span><span>${row.lat != null ? `${row.lat}, ${row.lng}` : '-'}</span></div>
-    </div>`);
+    </tr>
+  `).join('');
+  cards.innerHTML = failedCache.map(failedCard).join('');
 }
 async function fetchDashboard() {
-  const res = await fetch('/api/dashboard/today', { headers: adminHeaders() });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Failed to load dashboard');
-  const rows = data.employees || [];
-  const body = qs('dashboardBody');
-  body.innerHTML = rows.length ? rows.map(row => `
+  const data = await apiJson('/api/dashboard/today');
+  dashboardCache = data.employees || [];
+  const rows = dashboardCache;
+  const body = document.getElementById('dashboardBody');
+  const cards = document.getElementById('dashboardCards');
+  if (!rows.length) {
+    body.innerHTML = '<tr><td colspan="6">No data</td></tr>';
+    cards.innerHTML = '<div class="empty-card">No data</div>';
+    return;
+  }
+  body.innerHTML = rows.map(row => `
     <tr>
       <td>${row.name}</td>
       <td>${row.site}</td>
       <td>${Number(row.todayHours || 0).toFixed(2)}</td>
-      <td class="${row.currentlyClockedIn ? 'status-open' : 'status-closed'}">${row.currentlyClockedIn ? 'Clocked in' : 'Clocked out'}</td>
+      <td class="${row.currentlyClockedIn ? 'status-open' : 'status-closed'}">${row.mustClock === false ? 'No clock required' : row.currentlyClockedIn ? 'Clocked in' : 'Clocked out'}</td>
       <td>${row.firstIn || ''}</td>
       <td>${row.lastOut || ''}</td>
-    </tr>`).join('') : '<tr><td colspan="6">No data</td></tr>';
-  renderCardList('dashboardCards', rows, 'No data', row => `
-    <div class="info-card">
-      <div class="info-card-title">${row.name}</div>
-      <div class="info-row"><span>Site</span><span>${row.site || '-'}</span></div>
-      <div class="info-row"><span>Hours</span><span>${Number(row.todayHours || 0).toFixed(2)}</span></div>
-      <div class="info-row"><span>Status</span><span class="${row.currentlyClockedIn ? 'status-open' : 'status-closed'}">${row.currentlyClockedIn ? 'Clocked in' : 'Clocked out'}</span></div>
-      <div class="info-row"><span>First in</span><span>${row.firstIn || '-'}</span></div>
-      <div class="info-row"><span>Last out</span><span>${row.lastOut || '-'}</span></div>
-    </div>`);
-  qs('dashClockedIn').textContent = rows.filter(r => r.currentlyClockedIn).length;
-  qs('dashClockedOut').textContent = rows.filter(r => !r.currentlyClockedIn).length;
-  qs('dashPeople').textContent = rows.length;
-  qs('dashHours').textContent = rows.reduce((a, r) => a + Number(r.todayHours || 0), 0).toFixed(2);
+    </tr>
+  `).join('');
+  cards.innerHTML = rows.map(dashboardCard).join('');
+  const clockedIn = rows.filter(r => r.currentlyClockedIn).length;
+  const noClock = rows.filter(r => r.mustClock === false).length;
+  const clockedOut = rows.length - clockedIn - noClock;
+  const totalHours = rows.reduce((sum, r) => sum + Number(r.todayHours || 0), 0);
+  document.getElementById('statClockedIn').textContent = String(clockedIn);
+  document.getElementById('statClockedOut').textContent = String(clockedOut);
+  document.getElementById('statNoClock').textContent = String(noClock);
+  document.getElementById('statHoursToday').textContent = totalHours.toFixed(2);
 }
 async function fetchReport() {
-  const site = qs('reportSiteFilter').value;
+  const site = document.getElementById('reportSiteFilter').value;
   const url = site ? `/api/reports/weekly?site=${encodeURIComponent(site)}` : '/api/reports/weekly';
-  const res = await fetch(url, { headers: adminHeaders() });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Failed to load report');
-  const report = data.report || [];
-  const body = qs('reportBody');
-  body.innerHTML = report.length ? report.map(row => `
+  const data = await apiJson(url);
+  reportCache = data.report || [];
+  const report = reportCache;
+  const body = document.getElementById('reportBody');
+  const cards = document.getElementById('reportCards');
+  if (!report.length) {
+    body.innerHTML = '<tr><td colspan="8">No report yet</td></tr>';
+    cards.innerHTML = '<div class="empty-card">No report yet</div>';
+    return;
+  }
+  body.innerHTML = report.map(row => `
     <tr>
       <td>${row.name}</td>
       <td>${row.site}</td>
       <td>${row.compensationType}</td>
-      <td>${money(row.compensationRate)}</td>
-      <td>${Number(row.lunchMinutes || 0)} min</td>
-      <td>${Number(row.totalHoursRaw || 0).toFixed(2)}</td>
-      <td>${money(row.advanceBalance)}</td>
-      <td>${money(row.totalPay)}</td>
-    </tr>`).join('') : '<tr><td colspan="8">No report yet</td></tr>';
-  renderCardList('reportCards', report, 'No report yet', row => `
-    <div class="info-card">
-      <div class="info-card-title">${row.name}</div>
-      <div class="info-row"><span>Site</span><span>${row.site || '-'}</span></div>
-      <div class="info-row"><span>Type</span><span>${row.compensationType || '-'}</span></div>
-      <div class="info-row"><span>Rate</span><span>${money(row.compensationRate)}</span></div>
-      <div class="info-row"><span>Lunch</span><span>${Number(row.lunchMinutes || 0)} min</span></div>
-      <div class="info-row"><span>Hours</span><span>${Number(row.totalHoursRaw || 0).toFixed(2)}</span></div>
-      <div class="info-row"><span>Advance</span><span>${money(row.advanceBalance)}</span></div>
-      <div class="info-row"><span>Total</span><span>${money(row.totalPay)}</span></div>
-    </div>`);
+      <td>£${Number(row.compensationRate || 0).toFixed(2)}</td>
+      <td>${Number(row.paidHours || 0).toFixed(2)}</td>
+      <td>£${Number(row.grossPay || 0).toFixed(2)}</td>
+      <td>£${Number(row.advanceDeduction || 0).toFixed(2)}</td>
+      <td>£${Number(row.totalPay || 0).toFixed(2)}</td>
+    </tr>
+  `).join('');
+  cards.innerHTML = report.map(reportCard).join('');
 }
 function downloadExcel() {
-  const site = qs('reportSiteFilter').value;
-  const qs1 = site ? `?site=${encodeURIComponent(site)}` : '';
-  const password = encodeURIComponent(getAdminPassword());
-  window.open(`/api/reports/weekly/excel${qs1}${qs1 ? '&' : '?'}adminPassword=${password}`, '_blank');
+  const site = document.getElementById('reportSiteFilter').value;
+  const qs = site ? `?site=${encodeURIComponent(site)}&${tokenQuery()}` : `?${tokenQuery()}`;
+  window.open(`/api/reports/weekly/excel${qs}`, '_blank');
 }
 function downloadPdf() {
-  const site = qs('reportSiteFilter').value;
-  const qs1 = site ? `?site=${encodeURIComponent(site)}` : '';
-  const password = encodeURIComponent(getAdminPassword());
-  window.open(`/api/reports/weekly/pdf${qs1}${qs1 ? '&' : '?'}adminPassword=${password}`, '_blank');
+  const site = document.getElementById('reportSiteFilter').value;
+  const qs = site ? `?site=${encodeURIComponent(site)}&${tokenQuery()}` : `?${tokenQuery()}`;
+  window.open(`/api/reports/weekly/pdf${qs}`, '_blank');
 }
 function downloadBackup() {
-  const password = encodeURIComponent(getAdminPassword());
-  window.open(`/api/admin/backup/download?adminPassword=${password}`, '_blank');
+  const payload = {
+    employees,
+    sites,
+    logs: logsCache,
+    failedAttempts: failedCache,
+    dashboard: dashboardCache,
+    report: reportCache,
+    exportedAt: new Date().toISOString()
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `clockflow-backup-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 async function initMap() {
   if (!map) {
-    map = L.map('map').setView([51.48, 0.39], 11);
+    map = L.map('map');
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
   }
-  map.eachLayer(layer => { if (!(layer instanceof L.TileLayer)) map.removeLayer(layer); });
+  mapLayers.forEach(layer => map.removeLayer(layer));
+  mapLayers = [];
+
+  const bounds = [];
   sites.forEach(site => {
-    if (site.lat == null || site.lng == null) return;
-    L.marker([site.lat, site.lng]).addTo(map).bindPopup(`<b>${site.name}</b><br>${site.address || ''}`);
-    L.circle([site.lat, site.lng], { radius: site.radiusMeters || 50, color:'#3d72f4', fillOpacity:0.08 }).addTo(map);
+    const lat = Number(site.lat);
+    const lng = Number(site.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    const marker = L.marker([lat, lng]).addTo(map);
+    marker.bindPopup(`<b>${site.name}</b><br>${site.address || ''}`);
+    const circle = L.circle([lat, lng], { radius: Number(site.radiusMeters || 200), color: '#3d72f4', fillOpacity: 0.08 }).addTo(map);
+    mapLayers.push(marker, circle);
+    bounds.push([lat, lng]);
   });
-  const res = await fetch('/api/map/logs', { headers: adminHeaders() });
-  const points = await res.json();
+
+  const points = await apiJson('/api/map/logs');
   points.forEach(p => {
-    const m = L.circleMarker([p.lat, p.lng], { radius: 8, color: p.type === 'failed' ? 'red' : 'green' }).addTo(map);
-    m.bindPopup(`<b>${p.name}</b><br>${p.type === 'failed' ? (p.reason || '') : `${p.action}` }<br>${londonTime(p.time)}`);
+    const lat = Number(p.lat);
+    const lng = Number(p.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    const color = p.type === 'failed' ? 'red' : 'green';
+    const m = L.circleMarker([lat, lng], { radius: 8, color }).addTo(map);
+    const detail = p.type === 'failed' ? (p.reason || '') : `${p.name} ${String(p.action).toUpperCase()}`;
+    m.bindPopup(`<b>${p.name}</b><br>${detail}<br>${londonTime(p.time)}`);
+    mapLayers.push(m);
+    bounds.push([lat, lng]);
   });
-  setTimeout(() => map.invalidateSize(), 100);
+
+  if (bounds.length) map.fitBounds(bounds, { padding: [30, 30] });
+  else map.setView([51.48, 0.39], 11);
+  setTimeout(() => map.invalidateSize(), 50);
+  setTimeout(() => map.invalidateSize(), 250);
+}
+async function fetchDocuments() {
+  const employeeId = document.getElementById('docsEmployee').value;
+  const body = document.getElementById('docsBody');
+  const cards = document.getElementById('docsCards');
+  if (!employeeId) {
+    body.innerHTML = '<tr><td colspan="4">No documents</td></tr>';
+    cards.innerHTML = '<div class="empty-card">No documents</div>';
+    return;
+  }
+  try {
+    const data = await apiJson(`/api/employee-documents/${employeeId}`);
+    const docs = data.documents || [];
+    documentsCache = docs;
+    if (!docs.length) {
+      body.innerHTML = '<tr><td colspan="4">No documents</td></tr>';
+      cards.innerHTML = '<div class="empty-card">No documents</div>';
+      return;
+    }
+    body.innerHTML = docs.map(doc => `
+      <tr>
+        <td>${doc.docType || ''}</td>
+        <td>${doc.fileName || ''}</td>
+        <td>${doc.uploadedAtLocal || londonTime(doc.uploadedAt)}</td>
+        <td><a class="link-inline" href="/api/employee-document/${employeeId}/${doc.id}?${tokenQuery()}" target="_blank">Open</a></td>
+      </tr>
+    `).join('');
+    cards.innerHTML = docs.map(doc => docCard(employeeId, doc)).join('');
+  } catch (e) {
+    body.innerHTML = `<tr><td colspan="4">${e.message || 'Failed to load documents'}</td></tr>`;
+    cards.innerHTML = `<div class="empty-card">${e.message || 'Failed to load documents'}</div>`;
+  }
+}
+function viewDocuments(employeeId) {
+  document.getElementById('docsEmployee').value = employeeId;
+  fetchDocuments();
+  setActiveView('documents');
 }
 async function initAdmin() {
   await fetchSites();
   await fetchEmployees();
   clearEmployeeForm();
   clearManualForm();
-  await fetchLogs(1);
-  await fetchFailedAttempts(1);
+  await fetchLogs();
+  await fetchFailedAttempts();
   await fetchDashboard();
   await fetchReport();
+  await fetchDocuments();
   await initMap();
+  setActiveView(localStorage.getItem('clockflowAdminView') || 'today');
 }
 
-qs('loginBtn').addEventListener('click', login);
-qs('saveEmployeeBtn').addEventListener('click', saveEmployee);
-qs('cancelEmployeeBtn').addEventListener('click', clearEmployeeForm);
-qs('refreshEmployeesBtn').addEventListener('click', fetchEmployees);
-qs('saveManualBtn').addEventListener('click', saveManualLog);
-qs('cancelManualBtn').addEventListener('click', clearManualForm);
-qs('refreshLogsBtn').addEventListener('click', () => fetchLogs(logsPage));
-qs('prevLogsBtn').addEventListener('click', () => fetchLogs(logsPage - 1));
-qs('nextLogsBtn').addEventListener('click', () => fetchLogs(logsPage + 1));
-qs('refreshFailedBtn').addEventListener('click', () => fetchFailedAttempts(failedPage));
-qs('prevFailedBtn').addEventListener('click', () => fetchFailedAttempts(failedPage - 1));
-qs('nextFailedBtn').addEventListener('click', () => fetchFailedAttempts(failedPage + 1));
-qs('refreshDashboardBtn').addEventListener('click', fetchDashboard);
-qs('refreshReportBtn').addEventListener('click', fetchReport);
-qs('excelBtn').addEventListener('click', downloadExcel);
-qs('pdfBtn').addEventListener('click', downloadPdf);
-qs('backupBtn').addEventListener('click', downloadBackup);
-qs('refreshMapBtn').addEventListener('click', initMap);
-qsa('.admin-nav-btn').forEach(btn => btn.addEventListener('click', () => showAdminView(btn.dataset.view)));
-qsa('[data-view-jump]').forEach(btn => btn.addEventListener('click', () => showAdminView(btn.dataset.viewJump)));
+document.getElementById('loginBtn').addEventListener('click', login);
+document.getElementById('logoutBtn').addEventListener('click', logoutAdmin);
+document.getElementById('saveEmployeeBtn').addEventListener('click', saveEmployee);
+document.getElementById('cancelEmployeeBtn').addEventListener('click', clearEmployeeForm);
+document.getElementById('refreshEmployeesBtn').addEventListener('click', fetchEmployees);
+document.getElementById('saveManualBtn').addEventListener('click', saveManualLog);
+document.getElementById('cancelManualBtn').addEventListener('click', clearManualForm);
+document.getElementById('refreshLogsBtn').addEventListener('click', fetchLogs);
+document.getElementById('refreshFailedBtn').addEventListener('click', fetchFailedAttempts);
+document.getElementById('refreshDashboardBtn').addEventListener('click', fetchDashboard);
+document.getElementById('refreshReportBtn').addEventListener('click', fetchReport);
+document.getElementById('excelBtn').addEventListener('click', downloadExcel);
+document.getElementById('pdfBtn').addEventListener('click', downloadPdf);
+document.getElementById('refreshMapBtn').addEventListener('click', initMap);
+document.getElementById('docsEmployee').addEventListener('change', fetchDocuments);
+document.getElementById('refreshDocsBtn').addEventListener('click', fetchDocuments);
+document.getElementById('backupAllBtn').addEventListener('click', downloadBackup);
+const mobileBackup = document.getElementById('backupAllBtnMobile');
+if (mobileBackup) mobileBackup.addEventListener('click', downloadBackup);
 
 window.addEventListener('DOMContentLoaded', async () => {
-  const saved = getAdminPassword();
-  if (saved) {
-    qs('loginCard').style.display = 'none';
-    qs('adminContent').style.display = 'block';
+  setupNavigation();
+  const savedToken = getAdminToken();
+  if (savedToken) {
+    document.getElementById('loginCard').style.display = 'none';
+    document.getElementById('adminContent').style.display = 'block';
     try {
       await initAdmin();
-      showAdminView(localStorage.getItem('clockflowAdminView') || 'dashboard');
     } catch {
-      sessionStorage.removeItem('adminPassword');
-      localStorage.removeItem('adminPassword');
-      qs('loginCard').style.display = 'block';
-      qs('adminContent').style.display = 'none';
+      logoutAdmin();
     }
   } else {
     clearManualForm();
-    showAdminView(localStorage.getItem('clockflowAdminView') || 'dashboard');
   }
 });
+
+window.addEventListener('resize', () => {
+  fetchEmployees();
+  fetchDashboard();
+  fetchLogs();
+  fetchFailedAttempts();
+  fetchReport();
+  fetchDocuments();
+  if (map) setTimeout(() => map.invalidateSize(), 100);
+});
+
+window.editEmployee = editEmployee;
+window.deleteEmployee = deleteEmployee;
+window.editLog = editLog;
+window.deleteLog = deleteLog;
+window.viewDocuments = viewDocuments;
