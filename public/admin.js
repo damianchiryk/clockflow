@@ -2,14 +2,14 @@ let sites = [];
 let employees = [];
 let logsCache = [];
 let map;
-let mapLayers = [];
+let logsPage = 1;
+let failedPage = 1;
 
-function getAdminToken() {
-  return sessionStorage.getItem('adminToken') || localStorage.getItem('adminToken') || '';
+function getAdminPassword() {
+  return sessionStorage.getItem('adminPassword') || localStorage.getItem('adminPassword') || '';
 }
 function adminHeaders(extra = {}) {
-  const token = getAdminToken();
-  return token ? { ...extra, 'x-admin-token': token } : extra;
+  return { ...extra, 'x-admin-password': getAdminPassword() };
 }
 function londonTime(value) {
   return new Date(value).toLocaleString('en-GB', {
@@ -24,101 +24,82 @@ function dateForInput(value) {
 function timeForInput(value) {
   return new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(value));
 }
-function showMessage(id, text, ok = false) {
-  const el = document.getElementById(id);
+function qs(id) { return document.getElementById(id); }
+function setAdminMessage(text, ok = true) {
+  const el = qs('adminMessage');
   el.style.color = ok ? '#8ff0a4' : '#ffb0a9';
   el.textContent = text;
 }
-function logoutAdmin() {
-  sessionStorage.removeItem('adminToken');
-  localStorage.removeItem('adminToken');
-  document.getElementById('loginCard').style.display = 'block';
-  document.getElementById('adminContent').style.display = 'none';
-  document.getElementById('adminPassword').value = '';
+function showAdminView(view) {
+  localStorage.setItem('clockflowAdminView', view);
+  document.querySelectorAll('.admin-view').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.admin-nav-btn').forEach(el => el.classList.remove('active'));
+  const panel = document.getElementById(`view-${view}`);
+  if (panel) panel.classList.add('active');
+  const btn = document.querySelector(`.admin-nav-btn[data-view="${view}"]`);
+  if (btn) btn.classList.add('active');
+  if (view === 'map' && map) setTimeout(() => map.invalidateSize(), 120);
 }
 function clearEmployeeForm() {
-  document.getElementById('employeeFormTitle').textContent = 'Add / Edit Employee';
-  document.getElementById('empId').value = '';
-  document.getElementById('empName').value = '';
-  document.getElementById('empLogin').value = '';
-  document.getElementById('empPin').value = '';
-  document.getElementById('empRate').value = '';
-  document.getElementById('empLunch').value = '';
-  document.getElementById('empAdvance').value = '';
-  document.getElementById('empCompType').value = 'hourly';
-  document.getElementById('empGeoRequired').checked = true;
-  document.getElementById('empMustClock').checked = true;
-  document.getElementById('empMustChangePin').checked = true;
-  document.getElementById('empIsAdmin').checked = false;
-  document.getElementById('adminMessage').textContent = '';
+  qs('employeeFormTitle').textContent = 'Add / Edit Employee';
+  ['empId','empName','empLogin','empPin','empRate','empLunch','empAdvance'].forEach(id => qs(id).value = '');
+  qs('empCompType').value = 'hourly';
+  qs('empGeoRequired').checked = true;
+  qs('empIsAdmin').checked = false;
+  qs('empMustClock').checked = true;
+  qs('empMustChangePin').checked = false;
 }
 function clearManualForm() {
-  document.getElementById('manualFormTitle').textContent = 'Manual Clock Entry';
-  document.getElementById('manualLogId').value = '';
-  document.getElementById('manualAction').value = 'in';
-  document.getElementById('manualDate').value = dateForInput(new Date());
-  document.getElementById('manualTime').value = timeForInput(new Date()).slice(0, 5);
-  document.getElementById('manualNotes').value = '';
-  document.getElementById('manualMessage').textContent = '';
+  qs('manualFormTitle').textContent = 'Manual Clock Entry';
+  qs('manualLogId').value = '';
+  qs('manualAction').value = 'in';
+  qs('manualDate').value = new Date().toISOString().slice(0, 10);
+  qs('manualTime').value = new Date().toTimeString().slice(0, 5);
+  qs('manualNotes').value = '';
 }
-async function apiJson(url, options = {}) {
-  const res = await fetch(url, { ...options, headers: adminHeaders(options.headers || {}) });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Request failed');
-  return data;
-}
-
 async function login() {
-  try {
-    const password = document.getElementById('adminPassword').value.trim();
-    const res = await fetch('/api/admin-login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password })
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Login failed');
-    sessionStorage.setItem('adminToken', data.token);
-    localStorage.setItem('adminToken', data.token);
-    document.getElementById('loginCard').style.display = 'none';
-    document.getElementById('adminContent').style.display = 'block';
-    await initAdmin();
-  } catch (e) {
-    showMessage('loginMessage', e.message || 'Login failed');
+  const password = qs('adminPassword').value.trim();
+  const msg = qs('loginMessage');
+  const res = await fetch('/api/admin-login', { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ password }) });
+  const data = await res.json();
+  if (!res.ok) {
+    msg.style.color = '#ffb0a9';
+    msg.textContent = data.error || 'Login failed';
+    return;
   }
+  sessionStorage.setItem('adminPassword', password);
+  localStorage.setItem('adminPassword', password);
+  qs('loginCard').style.display = 'none';
+  qs('adminContent').style.display = 'block';
+  await initAdmin();
+  showAdminView(localStorage.getItem('clockflowAdminView') || 'employees');
 }
-
 async function fetchSites() {
-  sites = await apiJson('/api/sites');
-  const options = sites.map(site => `<option value="${site.id}::${site.name}">${site.name}</option>`).join('');
-  document.getElementById('empSite').innerHTML = options;
-  const filter = document.getElementById('reportSiteFilter');
-  filter.innerHTML = '<option value="">All sites</option>' + sites.map(site => `<option value="${site.name}">${site.name}</option>`).join('');
+  const res = await fetch('/api/sites', { headers: adminHeaders() });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to load sites');
+  sites = data;
+  qs('empSite').innerHTML = sites.map(s => `<option value="${s.id}::${s.name}">${s.name}</option>`).join('');
+  qs('reportSiteFilter').innerHTML = '<option value="">All sites</option>' + sites.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
 }
 async function fetchEmployees() {
   const res = await fetch('/api/employees');
   employees = await res.json();
-  const body = document.getElementById('employeesBody');
-  const manual = document.getElementById('manualEmployee');
-  const docsEmployee = document.getElementById('docsEmployee');
-  const options = employees.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
-  manual.innerHTML = options;
-  docsEmployee.innerHTML = options;
+  const body = qs('employeesBody');
+  qs('manualEmployee').innerHTML = employees.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
   if (!employees.length) {
-    body.innerHTML = '<tr><td colspan="7">No employees</td></tr>';
+    body.innerHTML = '<tr><td colspan="6">No employees</td></tr>';
     return;
   }
   body.innerHTML = employees.map(e => `
     <tr>
       <td>${e.name}${e.isAdmin ? ' <span class="small">(admin)</span>' : ''}</td>
-      <td>${e.login || ''}${e.mustChangePin ? ' <span class="small">(PIN change)</span>' : ''}</td>
+      <td>${e.login || ''}</td>
       <td>${e.site}</td>
-      <td>${e.compensationType} £${Number(e.compensationRate ?? 0).toFixed(2)}</td>
+      <td>${e.compensationType || e.payType || 'hourly'} £${Number(e.compensationRate ?? e.hourlyRate ?? 0).toFixed(2)}</td>
       <td>${e.mustClock === false ? 'No' : 'Yes'}</td>
-      <td>£${Number(e.advanceBalance || 0).toFixed(2)}</td>
       <td class="action-links">
         <button onclick="editEmployee('${e.id}')">Edit</button>
-        <button onclick="viewDocuments('${e.id}')">Docs</button>
         <button class="delete-btn" onclick="deleteEmployee('${e.id}')">Delete</button>
       </td>
     </tr>
@@ -127,78 +108,71 @@ async function fetchEmployees() {
 function editEmployee(id) {
   const e = employees.find(x => x.id === id);
   if (!e) return;
-  document.getElementById('employeeFormTitle').textContent = 'Edit Employee';
-  document.getElementById('empId').value = e.id;
-  document.getElementById('empName').value = e.name || '';
-  document.getElementById('empLogin').value = e.login || '';
-  document.getElementById('empPin').value = '';
-  document.getElementById('empRate').value = Number(e.compensationRate ?? e.hourlyRate ?? 0);
-  document.getElementById('empLunch').value = Number(e.lunchMinutes || 0);
-  document.getElementById('empAdvance').value = Number(e.advanceBalance || 0);
-  document.getElementById('empCompType').value = e.compensationType || 'hourly';
-  document.getElementById('empGeoRequired').checked = !!e.geoRequired;
-  document.getElementById('empMustClock').checked = e.mustClock !== false;
-  document.getElementById('empMustChangePin').checked = !!e.mustChangePin;
-  document.getElementById('empIsAdmin').checked = !!e.isAdmin;
-  document.getElementById('empSite').value = `${e.siteId}::${e.site}`;
+  qs('employeeFormTitle').textContent = 'Edit Employee';
+  qs('empId').value = e.id;
+  qs('empName').value = e.name || '';
+  qs('empLogin').value = e.login || '';
+  qs('empPin').value = '';
+  qs('empRate').value = Number(e.compensationRate ?? e.hourlyRate ?? 0);
+  qs('empLunch').value = Number(e.lunchMinutes || 0);
+  qs('empAdvance').value = Number(e.advanceBalance || 0);
+  qs('empCompType').value = e.compensationType || e.payType || 'hourly';
+  qs('empGeoRequired').checked = !!e.geoRequired;
+  qs('empIsAdmin').checked = !!e.isAdmin;
+  qs('empMustClock').checked = e.mustClock !== false;
+  qs('empMustChangePin').checked = !!e.mustChangePin;
+  qs('empSite').value = `${e.siteId}::${e.site}`;
+  showAdminView('add');
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 async function saveEmployee() {
-  const id = document.getElementById('empId').value;
-  const name = document.getElementById('empName').value.trim();
-  const login = document.getElementById('empLogin').value.trim();
-  const pin = document.getElementById('empPin').value.trim();
-  const siteValue = document.getElementById('empSite').value;
-  const rate = document.getElementById('empRate').value;
-  const lunch = document.getElementById('empLunch').value;
-  const advance = document.getElementById('empAdvance').value;
-  const compType = document.getElementById('empCompType').value;
-  const geoRequired = document.getElementById('empGeoRequired').checked;
-  const mustClock = document.getElementById('empMustClock').checked;
-  const mustChangePin = document.getElementById('empMustChangePin').checked;
-  const isAdmin = document.getElementById('empIsAdmin').checked;
-  if (!name || !siteValue || !login || (!id && !pin)) {
-    showMessage('adminMessage', 'Please fill required fields');
-    return;
-  }
+  const id = qs('empId').value;
+  const siteValue = qs('empSite').value;
+  if (!qs('empName').value.trim() || !siteValue || (!id && !qs('empPin').value.trim())) return setAdminMessage('Please fill required fields', false);
   const [siteId, site] = siteValue.split('::');
   const payload = {
-    name, login, site, siteId,
-    hourlyRate: Number(rate || 0),
-    compensationType: compType,
-    compensationRate: Number(rate || 0),
-    lunchMinutes: Number(lunch || 0),
-    advanceBalance: Number(advance || 0),
-    geoRequired, mustClock, mustChangePin, isAdmin
+    name: qs('empName').value.trim(),
+    login: qs('empLogin').value.trim(),
+    pin: qs('empPin').value.trim(),
+    site, siteId,
+    compensationType: qs('empCompType').value,
+    compensationRate: Number(qs('empRate').value || 0),
+    hourlyRate: Number(qs('empRate').value || 0),
+    lunchMinutes: Number(qs('empLunch').value || 0),
+    geoRequired: qs('empGeoRequired').checked,
+    isAdmin: qs('empIsAdmin').checked,
+    mustClock: qs('empMustClock').checked,
+    mustChangePin: qs('empMustChangePin').checked,
+    advanceBalance: Number(qs('empAdvance').value || 0)
   };
-  if (pin) payload.pin = pin;
   const url = id ? `/api/employees/${id}` : '/api/employees';
   const method = id ? 'PUT' : 'POST';
-  try {
-    await apiJson(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-    showMessage('adminMessage', id ? 'Employee updated' : 'Employee created', true);
-    clearEmployeeForm();
-    await fetchEmployees();
-    await fetchReport();
-  } catch (e) {
-    showMessage('adminMessage', e.message || 'Save failed');
-  }
+  const res = await fetch(url, { method, headers: adminHeaders({ 'Content-Type':'application/json' }), body: JSON.stringify(payload) });
+  const data = await res.json();
+  if (!res.ok) return setAdminMessage(data.error || 'Save failed', false);
+  setAdminMessage(id ? 'Employee updated' : 'Employee created', true);
+  clearEmployeeForm();
+  await fetchEmployees();
+  await fetchReport();
 }
 async function deleteEmployee(id) {
   if (!confirm('Delete this employee?')) return;
-  try {
-    await apiJson(`/api/employees/${id}`, { method: 'DELETE' });
-    await fetchEmployees();
-    await fetchReport();
-    await fetchDocuments();
-  } catch (e) {
-    alert(e.message || 'Delete failed');
-  }
+  const res = await fetch(`/api/employees/${id}`, { method: 'DELETE', headers: adminHeaders() });
+  const data = await res.json();
+  if (!res.ok) return alert(data.error || 'Delete failed');
+  await fetchEmployees();
+  await fetchReport();
 }
-
-async function fetchLogs() {
-  logsCache = await apiJson('/api/logs');
-  const body = document.getElementById('logsBody');
+async function fetchLogs(page = logsPage) {
+  logsPage = page;
+  const res = await fetch(`/api/logs?page=${page}`, { headers: adminHeaders() });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to load logs');
+  logsCache = data.items || [];
+  qs('logsPageInfo').textContent = `Page ${data.pagination.page} of ${data.pagination.totalPages} • ${data.pagination.total} rows`;
+  qs('prevLogsBtn').disabled = !data.pagination.hasPrev;
+  qs('nextLogsBtn').disabled = !data.pagination.hasNext;
+  const body = qs('logsBody');
   if (!logsCache.length) {
     body.innerHTML = '<tr><td colspan="7">No logs yet</td></tr>';
     return;
@@ -211,253 +185,194 @@ async function fetchLogs() {
       <td>${londonTime(log.time)}</td>
       <td>${log.geo?.required ? (log.geo.allowed ? `OK (${log.geo.distanceMeters ?? '-'}m)` : 'Blocked') : 'Bypass'}</td>
       <td>${log.source || 'mobile'}</td>
-      <td class="action-links">
-        <button onclick="editLog('${log.id}')">Edit</button>
-        <button class="delete-btn" onclick="deleteLog('${log.id}')">Delete</button>
-      </td>
-    </tr>
-  `).join('');
+      <td class="action-links"><button onclick="editLog('${log.id}')">Edit</button><button class="delete-btn" onclick="deleteLog('${log.id}')">Delete</button></td>
+    </tr>`).join('');
 }
 function editLog(id) {
   const log = logsCache.find(x => x.id === id);
   if (!log) return;
-  document.getElementById('manualFormTitle').textContent = 'Edit Clock Entry';
-  document.getElementById('manualLogId').value = log.id;
-  document.getElementById('manualEmployee').value = log.employeeId;
-  document.getElementById('manualAction').value = log.action;
-  document.getElementById('manualDate').value = dateForInput(log.time);
-  document.getElementById('manualTime').value = timeForInput(log.time).slice(0, 5);
-  document.getElementById('manualNotes').value = log.notes || '';
-  window.scrollTo({ top: 320, behavior: 'smooth' });
+  qs('manualFormTitle').textContent = 'Edit Clock Entry';
+  qs('manualLogId').value = log.id;
+  qs('manualEmployee').value = log.employeeId;
+  qs('manualAction').value = log.action;
+  qs('manualDate').value = dateForInput(log.time);
+  qs('manualTime').value = timeForInput(log.time).slice(0,5);
+  qs('manualNotes').value = log.notes || '';
+  showAdminView('employees');
+  window.scrollTo({ top: 200, behavior: 'smooth' });
 }
 async function saveManualLog() {
-  const id = document.getElementById('manualLogId').value;
-  const employeeId = document.getElementById('manualEmployee').value;
-  const action = document.getElementById('manualAction').value;
-  const date = document.getElementById('manualDate').value;
-  const time = document.getElementById('manualTime').value;
-  const notes = document.getElementById('manualNotes').value.trim();
-  if (!employeeId || !action || !date || !time) {
-    showMessage('manualMessage', 'Please fill all required fields');
+  const payload = { employeeId: qs('manualEmployee').value, action: qs('manualAction').value, date: qs('manualDate').value, time: qs('manualTime').value, notes: qs('manualNotes').value.trim() };
+  if (!payload.employeeId || !payload.action || !payload.date || !payload.time) {
+    qs('manualMessage').style.color = '#ffb0a9';
+    qs('manualMessage').textContent = 'Please fill all required fields';
     return;
   }
-  const payload = { employeeId, action, date, time, notes };
+  const id = qs('manualLogId').value;
   const url = id ? `/api/logs/${id}` : '/api/manual-log';
   const method = id ? 'PUT' : 'POST';
-  try {
-    await apiJson(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-    showMessage('manualMessage', id ? 'Entry updated' : 'Manual entry added', true);
+  const res = await fetch(url, { method, headers: adminHeaders({ 'Content-Type':'application/json' }), body: JSON.stringify(payload) });
+  const data = await res.json();
+  qs('manualMessage').style.color = res.ok ? '#8ff0a4' : '#ffb0a9';
+  qs('manualMessage').textContent = res.ok ? (id ? 'Entry updated' : 'Manual entry added') : (data.error || 'Save failed');
+  if (res.ok) {
     clearManualForm();
     await fetchLogs();
     await fetchDashboard();
     await fetchReport();
-    await initMap();
-  } catch (e) {
-    showMessage('manualMessage', e.message || 'Save failed');
   }
 }
 async function deleteLog(id) {
   if (!confirm('Delete this log?')) return;
-  try {
-    await apiJson(`/api/logs/${id}`, { method: 'DELETE' });
-    await fetchLogs();
-    await fetchDashboard();
-    await fetchReport();
-    await initMap();
-  } catch (e) {
-    alert(e.message || 'Delete failed');
-  }
+  const res = await fetch(`/api/logs/${id}`, { method:'DELETE', headers: adminHeaders() });
+  const data = await res.json();
+  if (!res.ok) return alert(data.error || 'Delete failed');
+  await fetchLogs();
+  await fetchDashboard();
+  await fetchReport();
 }
-async function fetchFailedAttempts() {
-  const data = await apiJson('/api/failed-attempts');
-  const body = document.getElementById('failedBody');
-  if (!data.length) {
+async function fetchFailedAttempts(page = failedPage) {
+  failedPage = page;
+  const res = await fetch(`/api/failed-attempts?page=${page}`, { headers: adminHeaders() });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to load failed attempts');
+  qs('failedPageInfo').textContent = `Page ${data.pagination.page} of ${data.pagination.totalPages} • ${data.pagination.total} rows`;
+  qs('prevFailedBtn').disabled = !data.pagination.hasPrev;
+  qs('nextFailedBtn').disabled = !data.pagination.hasNext;
+  const body = qs('failedBody');
+  if (!data.items.length) {
     body.innerHTML = '<tr><td colspan="5">No failed attempts</td></tr>';
     return;
   }
-  body.innerHTML = data.map(row => `
+  body.innerHTML = data.items.map(row => `
     <tr>
       <td>${row.name || ''}</td>
       <td>${row.reason || ''}</td>
       <td>${row.action || ''}</td>
       <td>${londonTime(row.time)}</td>
       <td>${row.lat != null ? `${row.lat}, ${row.lng}` : ''}</td>
-    </tr>
-  `).join('');
+    </tr>`).join('');
 }
 async function fetchDashboard() {
-  const data = await apiJson('/api/dashboard/today');
+  const res = await fetch('/api/dashboard/today', { headers: adminHeaders() });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to load dashboard');
   const rows = data.employees || [];
-  const body = document.getElementById('dashboardBody');
-  if (!rows.length) {
-    body.innerHTML = '<tr><td colspan="6">No data</td></tr>';
-    return;
-  }
-  body.innerHTML = rows.map(row => `
+  const body = qs('dashboardBody');
+  body.innerHTML = rows.length ? rows.map(row => `
     <tr>
       <td>${row.name}</td>
       <td>${row.site}</td>
       <td>${Number(row.todayHours || 0).toFixed(2)}</td>
-      <td class="${row.currentlyClockedIn ? 'status-open' : 'status-closed'}">${row.mustClock === false ? 'No clock required' : row.currentlyClockedIn ? 'Clocked in' : 'Clocked out'}</td>
+      <td class="${row.currentlyClockedIn ? 'status-open' : 'status-closed'}">${row.currentlyClockedIn ? 'Clocked in' : 'Clocked out'}</td>
       <td>${row.firstIn || ''}</td>
       <td>${row.lastOut || ''}</td>
-    </tr>
-  `).join('');
+    </tr>`).join('') : '<tr><td colspan="6">No data</td></tr>';
 }
 async function fetchReport() {
-  const site = document.getElementById('reportSiteFilter').value;
+  const site = qs('reportSiteFilter').value;
   const url = site ? `/api/reports/weekly?site=${encodeURIComponent(site)}` : '/api/reports/weekly';
-  const data = await apiJson(url);
+  const res = await fetch(url, { headers: adminHeaders() });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to load report');
   const report = data.report || [];
-  const body = document.getElementById('reportBody');
-  if (!report.length) {
-    body.innerHTML = '<tr><td colspan="8">No report yet</td></tr>';
-    return;
-  }
-  body.innerHTML = report.map(row => `
+  const body = qs('reportBody');
+  body.innerHTML = report.length ? report.map(row => `
     <tr>
       <td>${row.name}</td>
       <td>${row.site}</td>
       <td>${row.compensationType}</td>
       <td>£${Number(row.compensationRate || 0).toFixed(2)}</td>
-      <td>${Number(row.paidHours || 0).toFixed(2)}</td>
-      <td>£${Number(row.grossPay || 0).toFixed(2)}</td>
-      <td>£${Number(row.advanceDeduction || 0).toFixed(2)}</td>
+      <td>${Number(row.lunchMinutes || 0)} min</td>
+      <td>${Number(row.totalHoursRaw || 0).toFixed(2)}</td>
+      <td>£${Number(row.advanceBalance || 0).toFixed(2)}</td>
       <td>£${Number(row.totalPay || 0).toFixed(2)}</td>
-    </tr>
-  `).join('');
-}
-function tokenQuery() {
-  const token = encodeURIComponent(getAdminToken());
-  return `adminToken=${token}`;
+    </tr>`).join('') : '<tr><td colspan="8">No report yet</td></tr>';
 }
 function downloadExcel() {
-  const site = document.getElementById('reportSiteFilter').value;
-  const qs = site ? `?site=${encodeURIComponent(site)}&${tokenQuery()}` : `?${tokenQuery()}`;
-  window.open(`/api/reports/weekly/excel${qs}`, '_blank');
+  const site = qs('reportSiteFilter').value;
+  const qs1 = site ? `?site=${encodeURIComponent(site)}` : '';
+  const password = encodeURIComponent(getAdminPassword());
+  window.open(`/api/reports/weekly/excel${qs1}${qs1 ? '&' : '?'}adminPassword=${password}`, '_blank');
 }
 function downloadPdf() {
-  const site = document.getElementById('reportSiteFilter').value;
-  const qs = site ? `?site=${encodeURIComponent(site)}&${tokenQuery()}` : `?${tokenQuery()}`;
-  window.open(`/api/reports/weekly/pdf${qs}`, '_blank');
+  const site = qs('reportSiteFilter').value;
+  const qs1 = site ? `?site=${encodeURIComponent(site)}` : '';
+  const password = encodeURIComponent(getAdminPassword());
+  window.open(`/api/reports/weekly/pdf${qs1}${qs1 ? '&' : '?'}adminPassword=${password}`, '_blank');
+}
+function downloadBackup() {
+  const password = encodeURIComponent(getAdminPassword());
+  window.open(`/api/admin/backup/download?adminPassword=${password}`, '_blank');
 }
 async function initMap() {
-  const mapEl = document.getElementById('map');
   if (!map) {
-    map = L.map('map');
+    map = L.map('map').setView([51.48, 0.39], 11);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
   }
-  mapLayers.forEach(layer => map.removeLayer(layer));
-  mapLayers = [];
-
-  const bounds = [];
+  map.eachLayer(layer => { if (!(layer instanceof L.TileLayer)) map.removeLayer(layer); });
   sites.forEach(site => {
-    const lat = Number(site.lat);
-    const lng = Number(site.lng);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-    const marker = L.marker([lat, lng]).addTo(map);
-    marker.bindPopup(`<b>${site.name}</b><br>${site.address || ''}`);
-    const circle = L.circle([lat, lng], { radius: Number(site.radiusMeters || 200), color: '#3d72f4', fillOpacity: 0.08 }).addTo(map);
-    mapLayers.push(marker, circle);
-    bounds.push([lat, lng]);
+    if (site.lat == null || site.lng == null) return;
+    L.marker([site.lat, site.lng]).addTo(map).bindPopup(`<b>${site.name}</b><br>${site.address || ''}`);
+    L.circle([site.lat, site.lng], { radius: site.radiusMeters || 50, color:'#3d72f4', fillOpacity:0.08 }).addTo(map);
   });
-
-  const points = await apiJson('/api/map/logs');
+  const res = await fetch('/api/map/logs', { headers: adminHeaders() });
+  const points = await res.json();
   points.forEach(p => {
-    const lat = Number(p.lat);
-    const lng = Number(p.lng);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-    const color = p.type === 'failed' ? 'red' : 'green';
-    const m = L.circleMarker([lat, lng], { radius: 8, color }).addTo(map);
-    const detail = p.type === 'failed' ? (p.reason || '') : `${p.name} ${String(p.action).toUpperCase()}`;
-    m.bindPopup(`<b>${p.name}</b><br>${detail}<br>${londonTime(p.time)}`);
-    mapLayers.push(m);
-    bounds.push([lat, lng]);
+    const m = L.circleMarker([p.lat, p.lng], { radius: 8, color: p.type === 'failed' ? 'red' : 'green' }).addTo(map);
+    m.bindPopup(`<b>${p.name}</b><br>${p.type === 'failed' ? (p.reason || '') : `${p.action}` }<br>${londonTime(p.time)}`);
   });
-
-  if (bounds.length) map.fitBounds(bounds, { padding: [30, 30] });
-  else map.setView([51.48, 0.39], 11);
-  setTimeout(() => map.invalidateSize(), 50);
-  setTimeout(() => map.invalidateSize(), 250);
-}
-async function fetchDocuments() {
-  const employeeId = document.getElementById('docsEmployee').value;
-  const body = document.getElementById('docsBody');
-  if (!employeeId) {
-    body.innerHTML = '<tr><td colspan="4">No documents</td></tr>';
-    return;
-  }
-  try {
-    const data = await apiJson(`/api/employee-documents/${employeeId}`);
-    const docs = data.documents || [];
-    if (!docs.length) {
-      body.innerHTML = '<tr><td colspan="4">No documents</td></tr>';
-      return;
-    }
-    body.innerHTML = docs.map(doc => `
-      <tr>
-        <td>${doc.docType || ''}</td>
-        <td>${doc.fileName || ''}</td>
-        <td>${doc.uploadedAtLocal || londonTime(doc.uploadedAt)}</td>
-        <td><a class="link-inline" href="/api/employee-document/${employeeId}/${doc.id}?${tokenQuery()}" target="_blank">Open</a></td>
-      </tr>
-    `).join('');
-  } catch (e) {
-    body.innerHTML = `<tr><td colspan="4">${e.message || 'Failed to load documents'}</td></tr>`;
-  }
-}
-function viewDocuments(employeeId) {
-  document.getElementById('docsEmployee').value = employeeId;
-  fetchDocuments();
-  window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+  setTimeout(() => map.invalidateSize(), 100);
 }
 async function initAdmin() {
   await fetchSites();
   await fetchEmployees();
   clearEmployeeForm();
   clearManualForm();
-  await fetchLogs();
-  await fetchFailedAttempts();
+  await fetchLogs(1);
+  await fetchFailedAttempts(1);
   await fetchDashboard();
   await fetchReport();
-  await fetchDocuments();
   await initMap();
 }
 
 document.getElementById('loginBtn').addEventListener('click', login);
-document.getElementById('logoutBtn').addEventListener('click', logoutAdmin);
 document.getElementById('saveEmployeeBtn').addEventListener('click', saveEmployee);
 document.getElementById('cancelEmployeeBtn').addEventListener('click', clearEmployeeForm);
 document.getElementById('refreshEmployeesBtn').addEventListener('click', fetchEmployees);
 document.getElementById('saveManualBtn').addEventListener('click', saveManualLog);
 document.getElementById('cancelManualBtn').addEventListener('click', clearManualForm);
-document.getElementById('refreshLogsBtn').addEventListener('click', fetchLogs);
-document.getElementById('refreshFailedBtn').addEventListener('click', fetchFailedAttempts);
+document.getElementById('refreshLogsBtn').addEventListener('click', () => fetchLogs(logsPage));
+document.getElementById('prevLogsBtn').addEventListener('click', () => fetchLogs(logsPage - 1));
+document.getElementById('nextLogsBtn').addEventListener('click', () => fetchLogs(logsPage + 1));
+document.getElementById('refreshFailedBtn').addEventListener('click', () => fetchFailedAttempts(failedPage));
+document.getElementById('prevFailedBtn').addEventListener('click', () => fetchFailedAttempts(failedPage - 1));
+document.getElementById('nextFailedBtn').addEventListener('click', () => fetchFailedAttempts(failedPage + 1));
 document.getElementById('refreshDashboardBtn').addEventListener('click', fetchDashboard);
 document.getElementById('refreshReportBtn').addEventListener('click', fetchReport);
 document.getElementById('excelBtn').addEventListener('click', downloadExcel);
 document.getElementById('pdfBtn').addEventListener('click', downloadPdf);
+document.getElementById('backupBtn').addEventListener('click', downloadBackup);
 document.getElementById('refreshMapBtn').addEventListener('click', initMap);
-document.getElementById('docsEmployee').addEventListener('change', fetchDocuments);
-document.getElementById('refreshDocsBtn').addEventListener('click', fetchDocuments);
+document.querySelectorAll('.admin-nav-btn').forEach(btn => btn.addEventListener('click', () => showAdminView(btn.dataset.view)));
 
 window.addEventListener('DOMContentLoaded', async () => {
-  const savedToken = getAdminToken();
-  if (savedToken) {
-    document.getElementById('loginCard').style.display = 'none';
-    document.getElementById('adminContent').style.display = 'block';
+  const saved = getAdminPassword();
+  if (saved) {
+    qs('loginCard').style.display = 'none';
+    qs('adminContent').style.display = 'block';
     try {
       await initAdmin();
-    } catch {
-      logoutAdmin();
+      showAdminView(localStorage.getItem('clockflowAdminView') || 'employees');
+    }
+    catch {
+      sessionStorage.removeItem('adminPassword');
+      localStorage.removeItem('adminPassword');
+      qs('loginCard').style.display = 'block';
+      qs('adminContent').style.display = 'none';
     }
   } else {
     clearManualForm();
+    showAdminView(localStorage.getItem('clockflowAdminView') || 'employees');
   }
 });
-
-window.editEmployee = editEmployee;
-window.deleteEmployee = deleteEmployee;
-window.editLog = editLog;
-window.deleteLog = deleteLog;
-window.viewDocuments = viewDocuments;
