@@ -130,3 +130,43 @@ tbody tr:last-child td { border-bottom: none; }
 .admin-nav-btn.active { background:#6f95ff; box-shadow:0 0 0 2px rgba(255,255,255,.18) inset; }
 .admin-view { display:none; }
 .admin-view.active { display:block; }
+@media (max-width: 768px) {
+
+  .admin-grid {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  .admin-card {
+    max-width: 100% !important;
+    padding: 16px !important;
+  }
+
+  .panel {
+    width: 100%;
+  }
+
+  .admin-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .button-inline {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .button-inline .btn {
+    width: 100%;
+  }
+
+  table {
+    font-size: 12px;
+  }
+
+  th, td {
+    padding: 8px;
+  }
+
+}
