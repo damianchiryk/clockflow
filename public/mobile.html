@@ -1,80 +1,17 @@
+
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ClockFlow</title>
-  <link rel="stylesheet" href="/style.css" />
+<title>ClockFlow</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="page">
-    <div class="card mobile-card">
-      <div class="eyebrow">CLOCKFLOW</div>
-      <div id="topNotice" class="top-notice" style="display:none;"></div>
+<h1>ClockFlow</h1>
 
-      <div id="loginView">
-        <h1>Clock In / Out</h1>
-        <label for="loginInput">Login</label>
-        <input id="loginInput" type="text" placeholder="name.surname" autocomplete="username" />
-        <label for="pinInput">PIN</label>
-        <input id="pinInput" type="password" inputmode="numeric" placeholder="Enter PIN" autocomplete="current-password" />
-        <button class="btn btn-refresh" id="loginBtn" style="margin-top:18px;width:100%;">Login</button>
-        <div id="message" class="message"></div>
-        <a class="link" href="/admin.html">Open Admin Panel</a>
-      </div>
+<input id="name" placeholder="Name">
+<button onclick="clock('in')">Clock In</button>
+<button onclick="clock('out')">Clock Out</button>
 
-      <div id="appView" style="display:none;">
-        <div class="mobile-head">
-          <div>
-            <h1 style="margin-bottom:10px;">Clock In / Out</h1>
-            <div id="employeeSummary" class="site-note"></div>
-          </div>
-          <button class="btn btn-muted slim-btn" id="logoutBtn" type="button">Logout</button>
-        </div>
-
-        <div class="mobile-menu">
-          <button class="menu-btn active" data-tab="clockTab">Clock</button>
-          <button class="menu-btn" data-tab="documentsTab">Upload Document</button>
-          <button class="menu-btn" data-tab="logsTab">Logs</button>
-        </div>
-
-        <div id="clockTab" class="mobile-tab active">
-          <div id="siteNote" class="site-note"></div>
-          <button class="btn btn-in" id="clockInBtn">Clock In</button>
-          <button class="btn btn-out" id="clockOutBtn">Clock Out</button>
-        </div>
-
-        <div id="documentsTab" class="mobile-tab">
-          <div class="panel compact-panel">
-            <h2>Upload document</h2>
-            <label for="docType">Document type</label>
-            <select id="docType">
-              <option value="id">ID</option>
-              <option value="driving-licence">Driving Licence</option>
-              <option value="other">Other</option>
-            </select>
-            <label for="docFile">Choose file</label>
-            <input id="docFile" type="file" accept="image/*,.pdf" />
-            <button class="btn btn-refresh" id="uploadBtn" type="button" style="width:100%;margin-top:16px;">Upload document</button>
-            <div id="uploadMessage" class="message"></div>
-            <div id="documentsList" class="stack-list"></div>
-          </div>
-        </div>
-
-        <div id="logsTab" class="mobile-tab">
-          <div class="panel compact-panel">
-            <div class="admin-header">
-              <h2 style="margin:0;">My logs</h2>
-              <button class="btn btn-refresh slim-btn" id="refreshMyLogsBtn" type="button">Refresh</button>
-            </div>
-            <div id="myLogsList" class="stack-list"></div>
-          </div>
-        </div>
-
-        <a class="link" href="/admin.html">Open Admin Panel</a>
-      </div>
-    </div>
-  </div>
-  <script src="/mobile.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
