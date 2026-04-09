@@ -130,3 +130,33 @@ tbody tr:last-child td { border-bottom: none; }
 .admin-nav-btn.active { background:#6f95ff; box-shadow:0 0 0 2px rgba(255,255,255,.18) inset; }
 .admin-view { display:none; }
 .admin-view.active { display:block; }
+@media (max-width: 768px) {
+
+  .table-container {
+    overflow-x: hidden !important;
+  }
+
+  table {
+    display: none;
+  }
+
+  .mobile-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .employee-card {
+    background: rgba(255,255,255,0.05);
+    padding: 12px;
+    border-radius: 12px;
+    font-size: 14px;
+  }
+
+  .employee-card .row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+
+}
