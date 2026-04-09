@@ -30,6 +30,16 @@ function setAdminMessage(text, ok = true) {
   el.style.color = ok ? '#8ff0a4' : '#ffb0a9';
   el.textContent = text;
 }
+function showAdminView(view) {
+  localStorage.setItem('clockflowAdminView', view);
+  document.querySelectorAll('.admin-view').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.admin-nav-btn').forEach(el => el.classList.remove('active'));
+  const panel = document.getElementById(`view-${view}`);
+  if (panel) panel.classList.add('active');
+  const btn = document.querySelector(`.admin-nav-btn[data-view="${view}"]`);
+  if (btn) btn.classList.add('active');
+  if (view === 'map' && map) setTimeout(() => map.invalidateSize(), 120);
+}
 function clearEmployeeForm() {
   qs('employeeFormTitle').textContent = 'Add / Edit Employee';
   ['empId','empName','empLogin','empPin','empRate','empLunch','empAdvance'].forEach(id => qs(id).value = '');
@@ -62,6 +72,7 @@ async function login() {
   qs('loginCard').style.display = 'none';
   qs('adminContent').style.display = 'block';
   await initAdmin();
+  showAdminView(localStorage.getItem('clockflowAdminView') || 'employees');
 }
 async function fetchSites() {
   const res = await fetch('/api/sites', { headers: adminHeaders() });
@@ -111,7 +122,8 @@ function editEmployee(id) {
   qs('empMustClock').checked = e.mustClock !== false;
   qs('empMustChangePin').checked = !!e.mustChangePin;
   qs('empSite').value = `${e.siteId}::${e.site}`;
-  document.getElementById('employeeSection').scrollIntoView({ behavior: 'smooth' });
+  showAdminView('add');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 async function saveEmployee() {
   const id = qs('empId').value;
@@ -186,6 +198,7 @@ function editLog(id) {
   qs('manualDate').value = dateForInput(log.time);
   qs('manualTime').value = timeForInput(log.time).slice(0,5);
   qs('manualNotes').value = log.notes || '';
+  showAdminView('employees');
   window.scrollTo({ top: 200, behavior: 'smooth' });
 }
 async function saveManualLog() {
@@ -341,14 +354,25 @@ document.getElementById('excelBtn').addEventListener('click', downloadExcel);
 document.getElementById('pdfBtn').addEventListener('click', downloadPdf);
 document.getElementById('backupBtn').addEventListener('click', downloadBackup);
 document.getElementById('refreshMapBtn').addEventListener('click', initMap);
-document.querySelectorAll('[data-section-target]').forEach(btn => btn.addEventListener('click', () => document.getElementById(btn.dataset.sectionTarget).scrollIntoView({ behavior:'smooth' })));
+document.querySelectorAll('.admin-nav-btn').forEach(btn => btn.addEventListener('click', () => showAdminView(btn.dataset.view)));
 
 window.addEventListener('DOMContentLoaded', async () => {
   const saved = getAdminPassword();
   if (saved) {
     qs('loginCard').style.display = 'none';
     qs('adminContent').style.display = 'block';
-    try { await initAdmin(); }
-    catch { sessionStorage.removeItem('adminPassword'); localStorage.removeItem('adminPassword'); qs('loginCard').style.display = 'block'; qs('adminContent').style.display = 'none'; }
-  } else clearManualForm();
+    try {
+      await initAdmin();
+      showAdminView(localStorage.getItem('clockflowAdminView') || 'employees');
+    }
+    catch {
+      sessionStorage.removeItem('adminPassword');
+      localStorage.removeItem('adminPassword');
+      qs('loginCard').style.display = 'block';
+      qs('adminContent').style.display = 'none';
+    }
+  } else {
+    clearManualForm();
+    showAdminView(localStorage.getItem('clockflowAdminView') || 'employees');
+  }
 });

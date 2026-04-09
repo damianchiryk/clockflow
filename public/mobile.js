@@ -132,14 +132,21 @@ async function submitClock(action) {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
     });
     const data = await res.json();
-    if (!res.ok) return setMessage(data.error || 'Something went wrong', 'error');
+    if (!res.ok) {
+      const msg = data.error || 'Something went wrong';
+      setMessage(msg, 'error');
+      setNotice(msg, 'error');
+      return;
+    }
     currentState = data.state || currentState;
     updateClockButtons();
     setMessage(`${data.message} at ${data.entry.localTime}`, 'ok');
     setNotice(`${data.message} at ${data.entry.localTime}`, 'ok');
     await fetchMyLogs();
   } catch (err) {
-    setMessage(err.message || 'Location request failed', 'error');
+    const msg = err.message || 'Location request failed';
+    setMessage(msg, 'error');
+    setNotice(msg, 'error');
   }
 }
 async function uploadDocument() {

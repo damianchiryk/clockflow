@@ -125,3 +125,8 @@ tbody tr:last-child td { border-bottom: none; }
   .page { padding: 16px; }
   .mobile-head { flex-direction: column; align-items: stretch; }
 }
+
+.admin-nav-wrap { justify-content:flex-end; }
+.admin-nav-btn.active { background:#6f95ff; box-shadow:0 0 0 2px rgba(255,255,255,.18) inset; }
+.admin-view { display:none; }
+.admin-view.active { display:block; }

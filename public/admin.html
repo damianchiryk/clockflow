@@ -23,56 +23,60 @@
       <div class="eyebrow">CLOCKFLOW</div>
       <div class="admin-topbar">
         <h1 style="margin:0;">Admin Panel</h1>
-        <div class="button-inline">
-          <button class="btn btn-refresh slim-btn" data-section-target="employeeSection">Add / Edit Employee</button>
-          <button class="btn btn-refresh slim-btn" data-section-target="employeesListSection">Employees</button>
-          <button class="btn btn-refresh slim-btn" data-section-target="logsSection">Logs</button>
-          <button class="btn btn-refresh slim-btn" data-section-target="failedSection">Failed Attempts</button>
-          <button class="btn btn-refresh slim-btn" data-section-target="reportSection">Payroll</button>
-          <button class="btn btn-refresh slim-btn" data-section-target="mapSection">GPS Map</button>
+        <div class="button-inline admin-nav-wrap">
+          <button class="btn btn-refresh slim-btn admin-nav-btn active" data-view="add">Add / Edit Employee</button>
+          <button class="btn btn-refresh slim-btn admin-nav-btn" data-view="employees">Employees</button>
+          <button class="btn btn-refresh slim-btn admin-nav-btn" data-view="logs">Logs</button>
+          <button class="btn btn-refresh slim-btn admin-nav-btn" data-view="failed">Failed Attempts</button>
+          <button class="btn btn-refresh slim-btn admin-nav-btn" data-view="payroll">Payroll</button>
+          <button class="btn btn-refresh slim-btn admin-nav-btn" data-view="map">GPS Map</button>
           <button class="btn btn-refresh slim-btn" id="backupBtn">Backup All</button>
         </div>
       </div>
 
-      <div class="admin-grid top-gap">
-        <div class="panel section-card" id="employeeSection">
-          <h2 id="employeeFormTitle">Add / Edit Employee</h2>
-          <input type="hidden" id="empId" />
-          <label>Name</label>
-          <input id="empName" type="text" placeholder="Full name" />
-          <label>Login</label>
-          <input id="empLogin" type="text" placeholder="name.surname" />
-          <label>PIN</label>
-          <input id="empPin" type="text" placeholder="PIN" />
-          <label>Site</label>
-          <select id="empSite"></select>
-          <label>Pay type</label>
-          <select id="empCompType">
-            <option value="hourly">Hourly</option>
-            <option value="daily">Daily</option>
-            <option value="weekly">Weekly</option>
-            <option value="monthly">Monthly</option>
-          </select>
-          <label>Rate (£)</label>
-          <input id="empRate" type="number" step="0.01" placeholder="0.00" />
-          <label>Lunch minutes</label>
-          <input id="empLunch" type="number" step="1" placeholder="0" />
-          <label>Advance / deduction (£)</label>
-          <input id="empAdvance" type="number" step="0.01" placeholder="0.00" />
-          <div class="checks">
-            <label class="check"><input id="empGeoRequired" type="checkbox" checked /> Geolocation required</label>
-            <label class="check"><input id="empIsAdmin" type="checkbox" /> Admin profile</label>
-            <label class="check"><input id="empMustClock" type="checkbox" checked /> Must clock in / out</label>
-            <label class="check"><input id="empMustChangePin" type="checkbox" /> Must change PIN on first login</label>
+      <div class="admin-view active" id="view-add">
+        <div class="admin-grid top-gap">
+          <div class="panel section-card" id="employeeSection">
+            <h2 id="employeeFormTitle">Add / Edit Employee</h2>
+            <input type="hidden" id="empId" />
+            <label>Name</label>
+            <input id="empName" type="text" placeholder="Full name" />
+            <label>Login</label>
+            <input id="empLogin" type="text" placeholder="name.surname" />
+            <label>PIN</label>
+            <input id="empPin" type="text" placeholder="PIN" />
+            <label>Site</label>
+            <select id="empSite"></select>
+            <label>Pay type</label>
+            <select id="empCompType">
+              <option value="hourly">Hourly</option>
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+            </select>
+            <label>Rate (£)</label>
+            <input id="empRate" type="number" step="0.01" placeholder="0.00" />
+            <label>Lunch minutes</label>
+            <input id="empLunch" type="number" step="1" placeholder="0" />
+            <label>Advance / deduction (£)</label>
+            <input id="empAdvance" type="number" step="0.01" placeholder="0.00" />
+            <div class="checks">
+              <label class="check"><input id="empGeoRequired" type="checkbox" checked /> Geolocation required</label>
+              <label class="check"><input id="empIsAdmin" type="checkbox" /> Admin profile</label>
+              <label class="check"><input id="empMustClock" type="checkbox" checked /> Must clock in / out</label>
+              <label class="check"><input id="empMustChangePin" type="checkbox" /> Must change PIN on first login</label>
+            </div>
+            <div class="button-inline">
+              <button class="btn btn-refresh" id="saveEmployeeBtn">Save employee</button>
+              <button class="btn btn-muted" id="cancelEmployeeBtn" type="button">Clear</button>
+            </div>
+            <div class="message" id="adminMessage"></div>
           </div>
-          <div class="button-inline">
-            <button class="btn btn-refresh" id="saveEmployeeBtn">Save employee</button>
-            <button class="btn btn-muted" id="cancelEmployeeBtn" type="button">Clear</button>
-          </div>
-          <div class="message" id="adminMessage"></div>
         </div>
+      </div>
 
-        <div class="panel section-card" id="employeesListSection">
+      <div class="admin-view" id="view-employees">
+        <div class="panel section-card top-gap" id="employeesListSection">
           <div class="admin-header">
             <h2 style="margin:0;">Employees</h2>
             <button class="btn btn-refresh slim-btn" id="refreshEmployeesBtn">Refresh</button>
@@ -93,103 +97,111 @@
             </table>
           </div>
         </div>
+
+        <div class="admin-grid top-gap">
+          <div class="panel section-card">
+            <h2 id="manualFormTitle">Manual Clock Entry</h2>
+            <input type="hidden" id="manualLogId" />
+            <label>Employee</label>
+            <select id="manualEmployee"></select>
+            <label>Action</label>
+            <select id="manualAction"><option value="in">Clock In</option><option value="out">Clock Out</option></select>
+            <label>Date</label>
+            <input id="manualDate" type="date" />
+            <label>Time</label>
+            <input id="manualTime" type="time" />
+            <label>Notes</label>
+            <input id="manualNotes" type="text" placeholder="Optional note" />
+            <div class="button-inline">
+              <button class="btn btn-refresh" id="saveManualBtn">Save entry</button>
+              <button class="btn btn-muted" id="cancelManualBtn" type="button">Clear</button>
+            </div>
+            <div class="message" id="manualMessage"></div>
+          </div>
+
+          <div class="panel section-card">
+            <div class="admin-header">
+              <h2 style="margin:0;">Today's Dashboard</h2>
+              <button class="btn btn-refresh slim-btn" id="refreshDashboardBtn">Refresh</button>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Name</th><th>Site</th><th>Hours</th><th>Status</th><th>First in</th><th>Last out</th></tr></thead>
+                <tbody id="dashboardBody"><tr><td colspan="6">No data</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div class="admin-grid top-gap">
-        <div class="panel section-card">
-          <h2 id="manualFormTitle">Manual Clock Entry</h2>
-          <input type="hidden" id="manualLogId" />
-          <label>Employee</label>
-          <select id="manualEmployee"></select>
-          <label>Action</label>
-          <select id="manualAction"><option value="in">Clock In</option><option value="out">Clock Out</option></select>
-          <label>Date</label>
-          <input id="manualDate" type="date" />
-          <label>Time</label>
-          <input id="manualTime" type="time" />
-          <label>Notes</label>
-          <input id="manualNotes" type="text" placeholder="Optional note" />
-          <div class="button-inline">
-            <button class="btn btn-refresh" id="saveManualBtn">Save entry</button>
-            <button class="btn btn-muted" id="cancelManualBtn" type="button">Clear</button>
-          </div>
-          <div class="message" id="manualMessage"></div>
-        </div>
-
-        <div class="panel section-card">
+      <div class="admin-view" id="view-logs">
+        <div class="panel section-card top-gap" id="logsSection">
           <div class="admin-header">
-            <h2 style="margin:0;">Today's Dashboard</h2>
-            <button class="btn btn-refresh slim-btn" id="refreshDashboardBtn">Refresh</button>
+            <h2 style="margin:0;">Logs</h2>
+            <div class="button-inline">
+              <button class="btn btn-refresh slim-btn" id="prevLogsBtn">Prev</button>
+              <button class="btn btn-refresh slim-btn" id="nextLogsBtn">Next</button>
+              <button class="btn btn-refresh slim-btn" id="refreshLogsBtn">Refresh</button>
+            </div>
           </div>
+          <div class="small" id="logsPageInfo"></div>
           <div class="table-wrap">
             <table>
-              <thead><tr><th>Name</th><th>Site</th><th>Hours</th><th>Status</th><th>First in</th><th>Last out</th></tr></thead>
-              <tbody id="dashboardBody"><tr><td colspan="6">No data</td></tr></tbody>
+              <thead><tr><th>Name</th><th>Site</th><th>Action</th><th>Time</th><th>GPS</th><th>Source</th><th>Action</th></tr></thead>
+              <tbody id="logsBody"><tr><td colspan="7">No logs yet</td></tr></tbody>
             </table>
           </div>
         </div>
       </div>
 
-      <div class="panel section-card top-gap" id="logsSection">
-        <div class="admin-header">
-          <h2 style="margin:0;">Logs</h2>
-          <div class="button-inline">
-            <button class="btn btn-refresh slim-btn" id="prevLogsBtn">Prev</button>
-            <button class="btn btn-refresh slim-btn" id="nextLogsBtn">Next</button>
-            <button class="btn btn-refresh slim-btn" id="refreshLogsBtn">Refresh</button>
+      <div class="admin-view" id="view-failed">
+        <div class="panel section-card top-gap" id="failedSection">
+          <div class="admin-header">
+            <h2 style="margin:0;">Failed Attempts</h2>
+            <div class="button-inline">
+              <button class="btn btn-refresh slim-btn" id="prevFailedBtn">Prev</button>
+              <button class="btn btn-refresh slim-btn" id="nextFailedBtn">Next</button>
+              <button class="btn btn-refresh slim-btn" id="refreshFailedBtn">Refresh</button>
+            </div>
           </div>
-        </div>
-        <div class="small" id="logsPageInfo"></div>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Name</th><th>Site</th><th>Action</th><th>Time</th><th>GPS</th><th>Source</th><th>Action</th></tr></thead>
-            <tbody id="logsBody"><tr><td colspan="7">No logs yet</td></tr></tbody>
-          </table>
+          <div class="small" id="failedPageInfo"></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Name</th><th>Reason</th><th>Action</th><th>Time</th><th>GPS</th></tr></thead>
+              <tbody id="failedBody"><tr><td colspan="5">No failed attempts</td></tr></tbody>
+            </table>
+          </div>
         </div>
       </div>
 
-      <div class="panel section-card top-gap" id="failedSection">
-        <div class="admin-header">
-          <h2 style="margin:0;">Failed Attempts</h2>
-          <div class="button-inline">
-            <button class="btn btn-refresh slim-btn" id="prevFailedBtn">Prev</button>
-            <button class="btn btn-refresh slim-btn" id="nextFailedBtn">Next</button>
-            <button class="btn btn-refresh slim-btn" id="refreshFailedBtn">Refresh</button>
+      <div class="admin-view" id="view-payroll">
+        <div class="panel section-card top-gap" id="reportSection">
+          <div class="admin-header">
+            <h2 style="margin:0;">Weekly Payroll (Mon-Sun)</h2>
+            <div class="button-inline">
+              <select id="reportSiteFilter" style="max-width:220px;"><option value="">All sites</option></select>
+              <button class="btn btn-refresh slim-btn" id="refreshReportBtn">Refresh</button>
+              <button class="btn btn-refresh slim-btn" id="excelBtn">Excel</button>
+              <button class="btn btn-refresh slim-btn" id="pdfBtn">PDF</button>
+            </div>
           </div>
-        </div>
-        <div class="small" id="failedPageInfo"></div>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Name</th><th>Reason</th><th>Action</th><th>Time</th><th>GPS</th></tr></thead>
-            <tbody id="failedBody"><tr><td colspan="5">No failed attempts</td></tr></tbody>
-          </table>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Name</th><th>Site</th><th>Type</th><th>Rate</th><th>Lunch</th><th>Hours</th><th>Advance</th><th>Total</th></tr></thead>
+              <tbody id="reportBody"><tr><td colspan="8">No report yet</td></tr></tbody>
+            </table>
+          </div>
         </div>
       </div>
 
-      <div class="panel section-card top-gap" id="reportSection">
-        <div class="admin-header">
-          <h2 style="margin:0;">Weekly Payroll (Mon-Sun)</h2>
-          <div class="button-inline">
-            <select id="reportSiteFilter" style="max-width:220px;"><option value="">All sites</option></select>
-            <button class="btn btn-refresh slim-btn" id="refreshReportBtn">Refresh</button>
-            <button class="btn btn-refresh slim-btn" id="excelBtn">Excel</button>
-            <button class="btn btn-refresh slim-btn" id="pdfBtn">PDF</button>
+      <div class="admin-view" id="view-map">
+        <div class="panel section-card top-gap" id="mapSection">
+          <div class="admin-header">
+            <h2 style="margin:0;">GPS Map</h2>
+            <button class="btn btn-refresh slim-btn" id="refreshMapBtn">Refresh</button>
           </div>
+          <div id="map" style="height:420px; border-radius:16px;"></div>
         </div>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Name</th><th>Site</th><th>Type</th><th>Rate</th><th>Lunch</th><th>Hours</th><th>Advance</th><th>Total</th></tr></thead>
-            <tbody id="reportBody"><tr><td colspan="8">No report yet</td></tr></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="panel section-card top-gap" id="mapSection">
-        <div class="admin-header">
-          <h2 style="margin:0;">GPS Map</h2>
-          <button class="btn btn-refresh slim-btn" id="refreshMapBtn">Refresh</button>
-        </div>
-        <div id="map" style="height:420px; border-radius:16px;"></div>
       </div>
 
       <a class="link" href="/mobile.html">Back to Mobile</a>
