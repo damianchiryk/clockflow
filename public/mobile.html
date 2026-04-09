@@ -1,17 +1,68 @@
-
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<title>ClockFlow</title>
-<link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ClockFlow PRO</title>
+  <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
-<h1>ClockFlow</h1>
+  <div class="page">
+    <div class="card">
+      <div class="eyebrow">CLOCKFLOW</div>
+      <h1>Clock In / Out</h1>
 
-<input id="name" placeholder="Name">
-<button onclick="clock('in')">Clock In</button>
-<button onclick="clock('out')">Clock Out</button>
+      <div id="authBlock">
+        <label for="loginInput">Login</label>
+        <input id="loginInput" type="text" placeholder="Enter your login" autocomplete="username" />
 
-<script src="app.js"></script>
+        <label for="pinInput">PIN</label>
+        <input id="pinInput" type="password" inputmode="numeric" placeholder="Enter PIN" autocomplete="current-password" />
+
+        <button class="btn btn-refresh" id="loginMobileBtn" type="button">Login</button>
+      </div>
+
+      <div id="employeePanel" style="display:none;">
+        <div class="site-note" id="profileSummary"></div>
+        <div class="site-note" id="siteNote"></div>
+
+        <div id="changePinPanel" style="display:none;">
+          <label for="newPinInput">New PIN</label>
+          <input id="newPinInput" type="password" inputmode="numeric" placeholder="New PIN" />
+
+          <label for="confirmPinInput">Confirm PIN</label>
+          <input id="confirmPinInput" type="password" inputmode="numeric" placeholder="Confirm new PIN" />
+
+          <button class="btn btn-refresh" id="changePinBtn" type="button">Change PIN</button>
+        </div>
+
+        <div id="clockPanel" style="display:none;">
+          <button class="btn btn-in" id="clockInBtn">Clock In</button>
+          <button class="btn btn-out" id="clockOutBtn">Clock Out</button>
+        </div>
+
+        <div class="panel" style="margin-top:18px; padding:14px;">
+          <h2 style="font-size:18px; margin-bottom:12px;">Upload document</h2>
+          <label for="docTypeSelect">Document type</label>
+          <select id="docTypeSelect">
+            <option value="id">ID</option>
+            <option value="driving-licence">Driving licence</option>
+            <option value="other">Other</option>
+          </select>
+          <label for="docFileInput">Choose file</label>
+          <input id="docFileInput" type="file" accept="image/*,.pdf" />
+          <button class="btn btn-refresh" id="uploadDocBtn" type="button">Upload document</button>
+          <div class="site-note" id="docsList"></div>
+        </div>
+
+        <button class="btn btn-muted" id="logoutMobileBtn" type="button">Logout</button>
+      </div>
+
+      <div id="message" class="message"></div>
+      <a class="link" href="/admin.html">Open Admin Panel</a>
+    </div>
+  </div>
+
+  <script src="/mobile.js"></script>
 </body>
 </html>
