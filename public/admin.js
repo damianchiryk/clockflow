@@ -25,16 +25,27 @@ function timeForInput(value) {
   return new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(value));
 }
 function qs(id) { return document.getElementById(id); }
+function qsa(sel) { return document.querySelectorAll(sel); }
+function money(value) { return `£${Number(value || 0).toFixed(2)}`; }
 function setAdminMessage(text, ok = true) {
   const el = qs('adminMessage');
   el.style.color = ok ? '#8ff0a4' : '#ffb0a9';
   el.textContent = text;
 }
+function renderCardList(targetId, items, emptyText, renderer) {
+  const el = qs(targetId);
+  if (!el) return;
+  if (!items.length) {
+    el.innerHTML = `<div class="stack-empty">${emptyText}</div>`;
+    return;
+  }
+  el.innerHTML = items.map(renderer).join('');
+}
 function showAdminView(view) {
   localStorage.setItem('clockflowAdminView', view);
-  document.querySelectorAll('.admin-view').forEach(el => el.classList.remove('active'));
-  document.querySelectorAll('.admin-nav-btn').forEach(el => el.classList.remove('active'));
-  const panel = document.getElementById(`view-${view}`);
+  qsa('.admin-view').forEach(el => el.classList.remove('active'));
+  qsa('.admin-nav-btn').forEach(el => el.classList.remove('active'));
+  const panel = qs(`view-${view}`);
   if (panel) panel.classList.add('active');
   const btn = document.querySelector(`.admin-nav-btn[data-view="${view}"]`);
   if (btn) btn.classList.add('active');
@@ -72,7 +83,7 @@ async function login() {
   qs('loginCard').style.display = 'none';
   qs('adminContent').style.display = 'block';
   await initAdmin();
-  showAdminView(localStorage.getItem('clockflowAdminView') || 'employees');
+  showAdminView(localStorage.getItem('clockflowAdminView') || 'dashboard');
 }
 async function fetchSites() {
   const res = await fetch('/api/sites', { headers: adminHeaders() });
@@ -89,6 +100,7 @@ async function fetchEmployees() {
   qs('manualEmployee').innerHTML = employees.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
   if (!employees.length) {
     body.innerHTML = '<tr><td colspan="6">No employees</td></tr>';
+    renderCardList('employeesCards', [], 'No employees', () => '');
     return;
   }
   body.innerHTML = employees.map(e => `
@@ -96,7 +108,7 @@ async function fetchEmployees() {
       <td>${e.name}${e.isAdmin ? ' <span class="small">(admin)</span>' : ''}</td>
       <td>${e.login || ''}</td>
       <td>${e.site}</td>
-      <td>${e.compensationType || e.payType || 'hourly'} £${Number(e.compensationRate ?? e.hourlyRate ?? 0).toFixed(2)}</td>
+      <td>${e.compensationType || e.payType || 'hourly'} ${money(e.compensationRate ?? e.hourlyRate ?? 0)}</td>
       <td>${e.mustClock === false ? 'No' : 'Yes'}</td>
       <td class="action-links">
         <button onclick="editEmployee('${e.id}')">Edit</button>
@@ -104,6 +116,19 @@ async function fetchEmployees() {
       </td>
     </tr>
   `).join('');
+  renderCardList('employeesCards', employees, 'No employees', e => `
+    <div class="info-card">
+      <div class="info-card-title">${e.name}${e.isAdmin ? ' <span class="small">(admin)</span>' : ''}</div>
+      <div class="info-row"><span>Login</span><span>${e.login || '-'}</span></div>
+      <div class="info-row"><span>Site</span><span>${e.site || '-'}</span></div>
+      <div class="info-row"><span>Pay</span><span>${e.compensationType || e.payType || 'hourly'} ${money(e.compensationRate ?? e.hourlyRate ?? 0)}</span></div>
+      <div class="info-row"><span>Must clock</span><span>${e.mustClock === false ? 'No' : 'Yes'}</span></div>
+      <div class="info-actions">
+        <button class="btn btn-refresh slim-btn" onclick="editEmployee('${e.id}')">Edit</button>
+        <button class="btn btn-muted slim-btn" onclick="deleteEmployee('${e.id}')">Delete</button>
+      </div>
+    </div>
+  `);
 }
 function editEmployee(id) {
   const e = employees.find(x => x.id === id);
@@ -175,6 +200,7 @@ async function fetchLogs(page = logsPage) {
   const body = qs('logsBody');
   if (!logsCache.length) {
     body.innerHTML = '<tr><td colspan="7">No logs yet</td></tr>';
+    renderCardList('logsCards', [], 'No logs yet', () => '');
     return;
   }
   body.innerHTML = logsCache.map(log => `
@@ -187,6 +213,18 @@ async function fetchLogs(page = logsPage) {
       <td>${log.source || 'mobile'}</td>
       <td class="action-links"><button onclick="editLog('${log.id}')">Edit</button><button class="delete-btn" onclick="deleteLog('${log.id}')">Delete</button></td>
     </tr>`).join('');
+  renderCardList('logsCards', logsCache, 'No logs yet', log => `
+    <div class="info-card">
+      <div class="info-card-title">${log.name} <span class="badge ${log.action}">${String(log.action).toUpperCase()}</span></div>
+      <div class="info-row"><span>Site</span><span>${log.site || '-'}</span></div>
+      <div class="info-row"><span>Time</span><span>${londonTime(log.time)}</span></div>
+      <div class="info-row"><span>GPS</span><span>${log.geo?.required ? (log.geo.allowed ? `OK (${log.geo.distanceMeters ?? '-'}m)` : 'Blocked') : 'Bypass'}</span></div>
+      <div class="info-row"><span>Source</span><span>${log.source || 'mobile'}</span></div>
+      <div class="info-actions">
+        <button class="btn btn-refresh slim-btn" onclick="editLog('${log.id}')">Edit</button>
+        <button class="btn btn-muted slim-btn" onclick="deleteLog('${log.id}')">Delete</button>
+      </div>
+    </div>`);
 }
 function editLog(id) {
   const log = logsCache.find(x => x.id === id);
@@ -242,6 +280,7 @@ async function fetchFailedAttempts(page = failedPage) {
   const body = qs('failedBody');
   if (!data.items.length) {
     body.innerHTML = '<tr><td colspan="5">No failed attempts</td></tr>';
+    renderCardList('failedCards', [], 'No failed attempts', () => '');
     return;
   }
   body.innerHTML = data.items.map(row => `
@@ -252,6 +291,14 @@ async function fetchFailedAttempts(page = failedPage) {
       <td>${londonTime(row.time)}</td>
       <td>${row.lat != null ? `${row.lat}, ${row.lng}` : ''}</td>
     </tr>`).join('');
+  renderCardList('failedCards', data.items, 'No failed attempts', row => `
+    <div class="info-card">
+      <div class="info-card-title">${row.name || 'Unknown'}</div>
+      <div class="info-row"><span>Reason</span><span>${row.reason || '-'}</span></div>
+      <div class="info-row"><span>Action</span><span>${row.action || '-'}</span></div>
+      <div class="info-row"><span>Time</span><span>${londonTime(row.time)}</span></div>
+      <div class="info-row"><span>GPS</span><span>${row.lat != null ? `${row.lat}, ${row.lng}` : '-'}</span></div>
+    </div>`);
 }
 async function fetchDashboard() {
   const res = await fetch('/api/dashboard/today', { headers: adminHeaders() });
@@ -268,6 +315,19 @@ async function fetchDashboard() {
       <td>${row.firstIn || ''}</td>
       <td>${row.lastOut || ''}</td>
     </tr>`).join('') : '<tr><td colspan="6">No data</td></tr>';
+  renderCardList('dashboardCards', rows, 'No data', row => `
+    <div class="info-card">
+      <div class="info-card-title">${row.name}</div>
+      <div class="info-row"><span>Site</span><span>${row.site || '-'}</span></div>
+      <div class="info-row"><span>Hours</span><span>${Number(row.todayHours || 0).toFixed(2)}</span></div>
+      <div class="info-row"><span>Status</span><span class="${row.currentlyClockedIn ? 'status-open' : 'status-closed'}">${row.currentlyClockedIn ? 'Clocked in' : 'Clocked out'}</span></div>
+      <div class="info-row"><span>First in</span><span>${row.firstIn || '-'}</span></div>
+      <div class="info-row"><span>Last out</span><span>${row.lastOut || '-'}</span></div>
+    </div>`);
+  qs('dashClockedIn').textContent = rows.filter(r => r.currentlyClockedIn).length;
+  qs('dashClockedOut').textContent = rows.filter(r => !r.currentlyClockedIn).length;
+  qs('dashPeople').textContent = rows.length;
+  qs('dashHours').textContent = rows.reduce((a, r) => a + Number(r.todayHours || 0), 0).toFixed(2);
 }
 async function fetchReport() {
   const site = qs('reportSiteFilter').value;
@@ -282,12 +342,23 @@ async function fetchReport() {
       <td>${row.name}</td>
       <td>${row.site}</td>
       <td>${row.compensationType}</td>
-      <td>£${Number(row.compensationRate || 0).toFixed(2)}</td>
+      <td>${money(row.compensationRate)}</td>
       <td>${Number(row.lunchMinutes || 0)} min</td>
       <td>${Number(row.totalHoursRaw || 0).toFixed(2)}</td>
-      <td>£${Number(row.advanceBalance || 0).toFixed(2)}</td>
-      <td>£${Number(row.totalPay || 0).toFixed(2)}</td>
+      <td>${money(row.advanceBalance)}</td>
+      <td>${money(row.totalPay)}</td>
     </tr>`).join('') : '<tr><td colspan="8">No report yet</td></tr>';
+  renderCardList('reportCards', report, 'No report yet', row => `
+    <div class="info-card">
+      <div class="info-card-title">${row.name}</div>
+      <div class="info-row"><span>Site</span><span>${row.site || '-'}</span></div>
+      <div class="info-row"><span>Type</span><span>${row.compensationType || '-'}</span></div>
+      <div class="info-row"><span>Rate</span><span>${money(row.compensationRate)}</span></div>
+      <div class="info-row"><span>Lunch</span><span>${Number(row.lunchMinutes || 0)} min</span></div>
+      <div class="info-row"><span>Hours</span><span>${Number(row.totalHoursRaw || 0).toFixed(2)}</span></div>
+      <div class="info-row"><span>Advance</span><span>${money(row.advanceBalance)}</span></div>
+      <div class="info-row"><span>Total</span><span>${money(row.totalPay)}</span></div>
+    </div>`);
 }
 function downloadExcel() {
   const site = qs('reportSiteFilter').value;
@@ -336,25 +407,26 @@ async function initAdmin() {
   await initMap();
 }
 
-document.getElementById('loginBtn').addEventListener('click', login);
-document.getElementById('saveEmployeeBtn').addEventListener('click', saveEmployee);
-document.getElementById('cancelEmployeeBtn').addEventListener('click', clearEmployeeForm);
-document.getElementById('refreshEmployeesBtn').addEventListener('click', fetchEmployees);
-document.getElementById('saveManualBtn').addEventListener('click', saveManualLog);
-document.getElementById('cancelManualBtn').addEventListener('click', clearManualForm);
-document.getElementById('refreshLogsBtn').addEventListener('click', () => fetchLogs(logsPage));
-document.getElementById('prevLogsBtn').addEventListener('click', () => fetchLogs(logsPage - 1));
-document.getElementById('nextLogsBtn').addEventListener('click', () => fetchLogs(logsPage + 1));
-document.getElementById('refreshFailedBtn').addEventListener('click', () => fetchFailedAttempts(failedPage));
-document.getElementById('prevFailedBtn').addEventListener('click', () => fetchFailedAttempts(failedPage - 1));
-document.getElementById('nextFailedBtn').addEventListener('click', () => fetchFailedAttempts(failedPage + 1));
-document.getElementById('refreshDashboardBtn').addEventListener('click', fetchDashboard);
-document.getElementById('refreshReportBtn').addEventListener('click', fetchReport);
-document.getElementById('excelBtn').addEventListener('click', downloadExcel);
-document.getElementById('pdfBtn').addEventListener('click', downloadPdf);
-document.getElementById('backupBtn').addEventListener('click', downloadBackup);
-document.getElementById('refreshMapBtn').addEventListener('click', initMap);
-document.querySelectorAll('.admin-nav-btn').forEach(btn => btn.addEventListener('click', () => showAdminView(btn.dataset.view)));
+qs('loginBtn').addEventListener('click', login);
+qs('saveEmployeeBtn').addEventListener('click', saveEmployee);
+qs('cancelEmployeeBtn').addEventListener('click', clearEmployeeForm);
+qs('refreshEmployeesBtn').addEventListener('click', fetchEmployees);
+qs('saveManualBtn').addEventListener('click', saveManualLog);
+qs('cancelManualBtn').addEventListener('click', clearManualForm);
+qs('refreshLogsBtn').addEventListener('click', () => fetchLogs(logsPage));
+qs('prevLogsBtn').addEventListener('click', () => fetchLogs(logsPage - 1));
+qs('nextLogsBtn').addEventListener('click', () => fetchLogs(logsPage + 1));
+qs('refreshFailedBtn').addEventListener('click', () => fetchFailedAttempts(failedPage));
+qs('prevFailedBtn').addEventListener('click', () => fetchFailedAttempts(failedPage - 1));
+qs('nextFailedBtn').addEventListener('click', () => fetchFailedAttempts(failedPage + 1));
+qs('refreshDashboardBtn').addEventListener('click', fetchDashboard);
+qs('refreshReportBtn').addEventListener('click', fetchReport);
+qs('excelBtn').addEventListener('click', downloadExcel);
+qs('pdfBtn').addEventListener('click', downloadPdf);
+qs('backupBtn').addEventListener('click', downloadBackup);
+qs('refreshMapBtn').addEventListener('click', initMap);
+qsa('.admin-nav-btn').forEach(btn => btn.addEventListener('click', () => showAdminView(btn.dataset.view)));
+qsa('[data-view-jump]').forEach(btn => btn.addEventListener('click', () => showAdminView(btn.dataset.viewJump)));
 
 window.addEventListener('DOMContentLoaded', async () => {
   const saved = getAdminPassword();
@@ -363,9 +435,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     qs('adminContent').style.display = 'block';
     try {
       await initAdmin();
-      showAdminView(localStorage.getItem('clockflowAdminView') || 'employees');
-    }
-    catch {
+      showAdminView(localStorage.getItem('clockflowAdminView') || 'dashboard');
+    } catch {
       sessionStorage.removeItem('adminPassword');
       localStorage.removeItem('adminPassword');
       qs('loginCard').style.display = 'block';
@@ -373,6 +444,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
   } else {
     clearManualForm();
-    showAdminView(localStorage.getItem('clockflowAdminView') || 'employees');
+    showAdminView(localStorage.getItem('clockflowAdminView') || 'dashboard');
   }
 });
