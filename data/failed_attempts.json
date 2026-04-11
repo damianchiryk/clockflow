@@ -1004,5 +1004,70 @@
     "site": "VRS Mechanical",
     "lat": 51.4790777,
     "lng": 0.4147793
+  },
+  {
+    "id": "1775799694445a4642f",
+    "time": "2026-04-10T05:41:34.445Z",
+    "localTime": "10/04/2026, 06:41:34",
+    "employeeId": "hitesh",
+    "name": "Hitesh Chawda",
+    "action": "in",
+    "reason": "Outside allowed area",
+    "distanceMeters": 64,
+    "site": "VRS Bodyshop",
+    "lat": 51.47897709534284,
+    "lng": 0.4146319219587009
+  },
+  {
+    "id": "1775799707212755b3b",
+    "time": "2026-04-10T05:41:47.212Z",
+    "localTime": "10/04/2026, 06:41:47",
+    "employeeId": "hitesh",
+    "name": "Hitesh Chawda",
+    "action": "in",
+    "reason": "Outside allowed area",
+    "distanceMeters": 60,
+    "site": "VRS Bodyshop",
+    "lat": 51.479036279962614,
+    "lng": 0.4145106250530881
+  },
+  {
+    "id": "1775837989707c420b0",
+    "time": "2026-04-10T16:19:49.707Z",
+    "localTime": "10/04/2026, 17:19:49",
+    "employeeId": "piotr",
+    "name": "Piotr Lejwoda",
+    "action": "out",
+    "reason": "Outside allowed area",
+    "distanceMeters": 361,
+    "site": "VRS Bodyshop",
+    "lat": 51.4808841,
+    "lng": 0.4176958
+  },
+  {
+    "id": "1775837989857bb3369",
+    "time": "2026-04-10T16:19:49.857Z",
+    "localTime": "10/04/2026, 17:19:49",
+    "employeeId": "piotr",
+    "name": "Piotr Lejwoda",
+    "action": "out",
+    "reason": "Outside allowed area",
+    "distanceMeters": 361,
+    "site": "VRS Bodyshop",
+    "lat": 51.4808841,
+    "lng": 0.4176958
+  },
+  {
+    "id": "1775838532588674b25",
+    "time": "2026-04-10T16:28:52.588Z",
+    "localTime": "10/04/2026, 17:28:52",
+    "employeeId": "piotr",
+    "name": "Piotr Lejwoda",
+    "action": "in",
+    "reason": "Outside allowed area",
+    "distanceMeters": 1272,
+    "site": "VRS Bodyshop",
+    "lat": 51.4898107,
+    "lng": 0.4092302
   }
 ]

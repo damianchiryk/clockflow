@@ -18,6 +18,15 @@
     "advanceBalance": 0,
     "documents": [
       {
+        "id": "177577410188602f928",
+        "docType": "driving-licence",
+        "fileName": "IMG_9453.jpeg",
+        "storedAs": "damian-1775774101854-driving-licence.jpeg",
+        "mimeType": "image/jpeg",
+        "uploadedAt": "2026-04-09T22:35:01.886Z",
+        "uploadedAtLocal": "09/04/2026, 23:35:01"
+      },
+      {
         "id": "17755886314012f43e4",
         "docType": "id",
         "fileName": "IMG_9366.jpeg",
@@ -137,12 +146,14 @@
     "compensationRate": 750,
     "mustClock": true,
     "mustChangePin": false,
-    "advanceBalance": 0,
+    "advanceBalance": 270,
     "documents": [],
     "hourlyRate": 750,
     "lunchMinutes": 0,
     "geoRequired": true,
-    "isAdmin": false
+    "isAdmin": false,
+    "dailyRate": 0,
+    "monthlyRate": 0
   },
   {
     "id": "sergiu",
@@ -357,12 +368,14 @@
     "compensationRate": 100,
     "mustClock": true,
     "mustChangePin": true,
-    "advanceBalance": 0,
+    "advanceBalance": 10,
     "documents": [],
     "hourlyRate": 100,
     "lunchMinutes": 0,
     "geoRequired": true,
-    "isAdmin": false
+    "isAdmin": false,
+    "weeklyRate": 0,
+    "monthlyRate": 0
   },
   {
     "id": "wioleta1",
@@ -442,7 +455,9 @@
     "hourlyRate": 750,
     "lunchMinutes": 0,
     "geoRequired": true,
-    "isAdmin": false
+    "isAdmin": false,
+    "dailyRate": 0,
+    "monthlyRate": 0
   },
   {
     "id": "cristiano",
@@ -470,17 +485,20 @@
     "site": "ALK Bodyshop",
     "siteId": "alk-grays",
     "payType": "hourly",
-    "hourlyRate": 12.21,
+    "hourlyRate": 12.71,
     "lunchMinutes": 60,
     "login": "alfie.phillips",
     "compensationType": "hourly",
-    "compensationRate": 12.21,
+    "compensationRate": 12.71,
     "mustClock": true,
     "mustChangePin": false,
     "advanceBalance": 0,
     "documents": [],
     "geoRequired": true,
-    "isAdmin": false
+    "isAdmin": false,
+    "dailyRate": 0,
+    "weeklyRate": 0,
+    "monthlyRate": 0
   },
   {
     "id": "jethron",
@@ -508,17 +526,20 @@
     "site": "ALK Bodyshop",
     "siteId": "alk-grays",
     "payType": "hourly",
-    "hourlyRate": 7.55,
+    "hourlyRate": 10.85,
     "lunchMinutes": 60,
     "login": "jonas",
     "compensationType": "hourly",
-    "compensationRate": 7.55,
+    "compensationRate": 10.85,
     "mustClock": true,
     "mustChangePin": false,
     "advanceBalance": 0,
     "documents": [],
     "geoRequired": true,
-    "isAdmin": false
+    "isAdmin": false,
+    "dailyRate": 0,
+    "weeklyRate": 0,
+    "monthlyRate": 0
   },
   {
     "id": "rob",

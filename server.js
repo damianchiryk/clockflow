@@ -58,6 +58,31 @@ function dateLondon(date) {
 function timeLondon(date) {
   return new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).format(new Date(date));
 }
+
+function londonLocalToISOString(dateStr, timeStr) {
+  const [year, month, day] = String(dateStr || '').split('-').map(Number);
+  const [hour, minute] = String(timeStr || '').split(':').map(Number);
+  if (![year, month, day, hour, minute].every(Number.isFinite)) throw new Error('Invalid London date/time');
+
+  const utcGuess = new Date(Date.UTC(year, month - 1, day, hour, minute, 0));
+  const londonParts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/London',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hourCycle: 'h23'
+  }).formatToParts(utcGuess).reduce((acc, part) => {
+    if (part.type !== 'literal') acc[part.type] = part.value;
+    return acc;
+  }, {});
+
+  const displayedUtc = Date.UTC(
+    Number(londonParts.year), Number(londonParts.month) - 1, Number(londonParts.day),
+    Number(londonParts.hour), Number(londonParts.minute), Number(londonParts.second || 0)
+  );
+  const desiredUtc = Date.UTC(year, month - 1, day, hour, minute, 0);
+  const offsetMs = displayedUtc - desiredUtc;
+  return new Date(utcGuess.getTime() - offsetMs).toISOString();
+}
 function startEndOfDayLondon(dateStr) {
   const d = dateStr ? new Date(`${dateStr}T12:00:00`) : new Date();
   const dayInUK = new Date(new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d) + 'T00:00:00');
@@ -208,6 +233,40 @@ function paginate(items, page = 1, limit = 20) {
     pagination: { page: safePage, limit, total, totalPages, hasNext: safePage < totalPages, hasPrev: safePage > 1 }
   };
 }
+
+function groupLogsByDay(employee, logs, start, end) {
+  const startDate = new Date(`${dateLondon(start)}T12:00:00`);
+  const endDate = new Date(`${dateLondon(end)}T12:00:00`);
+  const days = [];
+  const byDate = new Map();
+  logs.filter(l => l.employeeId === employee.id).forEach(log => {
+    const key = dateLondon(log.time);
+    if (!byDate.has(key)) byDate.set(key, []);
+    byDate.get(key).push(log);
+  });
+
+  for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+    const key = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+    const dayLogs = (byDate.get(key) || []).sort((a, b) => new Date(a.time) - new Date(b.time));
+    let totalMs = 0;
+    let openIn = null;
+    for (const log of dayLogs) {
+      if (log.action === 'in') openIn = log;
+      else if (log.action === 'out' && openIn) {
+        totalMs += Math.max(0, new Date(log.time) - new Date(openIn.time));
+        openIn = null;
+      }
+    }
+    days.push({
+      date: key,
+      logs: dayLogs,
+      totalHours: Number((totalMs / 36e5).toFixed(2)),
+      openSession: !!openIn
+    });
+  }
+  return days;
+}
+
 function ensureSeed() {
   ensureDir(DATA_DIR);
   ensureDir(UPLOADS_DIR);
@@ -432,7 +491,7 @@ app.post('/api/manual-log', adminOnly, (req, res) => {
   const logs = readJson(LOGS_FILE, []);
   const employee = employees.find(e => e.id === employeeId);
   if (!employee) return res.status(404).json({ error: 'Employee not found' });
-  const entry = buildLogEntry({ employee, action, timeISO: new Date(`${date}T${time}:00`).toISOString(), lat: null, lng: null, geo: { required: false, allowed: true, distanceMeters: null, siteName: employee.site }, source: 'manual', notes: notes || '' });
+  const entry = buildLogEntry({ employee, action, timeISO: londonLocalToISOString(date, time), lat: null, lng: null, geo: { required: false, allowed: true, distanceMeters: null, siteName: employee.site }, source: 'manual', notes: notes || '' });
   logs.push(entry);
   writeJson(LOGS_FILE, logs);
   res.json({ success: true, entry });
@@ -443,7 +502,7 @@ app.put('/api/logs/:id', adminOnly, (req, res) => {
   if (idx === -1) return res.status(404).json({ error: 'Log not found' });
   const current = logs[idx];
   const body = req.body || {};
-  const timeISO = body.date && body.time ? new Date(`${body.date}T${body.time}:00`).toISOString() : current.time;
+  const timeISO = body.date && body.time ? londonLocalToISOString(body.date, body.time) : current.time;
   logs[idx] = { ...current, action: body.action || current.action, notes: body.notes ?? current.notes, time: timeISO, localTime: formatLondon(timeISO) };
   writeJson(LOGS_FILE, logs);
   res.json({ success: true, entry: logs[idx] });
@@ -480,6 +539,35 @@ app.get('/api/map/logs', adminOnly, (req, res) => {
   const successful = logs.filter(l => l.lat !== null && l.lng !== null).map(l => ({ type: 'success', id: l.id, name: l.name, site: l.site, action: l.action, time: l.time, localTime: l.localTime, lat: l.lat, lng: l.lng }));
   const unsuccessful = failed.filter(l => l.lat != null && l.lng != null).map(l => ({ type: 'failed', id: l.id, name: l.name || 'Unknown', site: l.site || '', action: l.action || '', reason: l.reason || '', time: l.time, localTime: l.localTime, lat: l.lat, lng: l.lng }));
   res.json([...successful, ...unsuccessful]);
+});
+
+
+app.get('/api/employee-timesheet', adminOnly, (req, res) => {
+  const { employeeId, start, end } = req.query;
+  if (!employeeId) return res.status(400).json({ error: 'Missing employeeId' });
+
+  const employees = readJson(EMPLOYEES_FILE, []);
+  const logs = readJson(LOGS_FILE, []);
+  const employee = employees.find(e => e.id === employeeId);
+  if (!employee) return res.status(404).json({ error: 'Employee not found' });
+
+  let startDate;
+  let endDate;
+  if (start && end) {
+    startDate = new Date(`${start}T00:00:00`);
+    endDate = new Date(`${end}T23:59:59`);
+  } else {
+    const range = weekRangeMondayToSunday(new Date());
+    startDate = range.monday;
+    endDate = range.sunday;
+  }
+  const days = groupLogsByDay(employee, logs, startDate, endDate);
+  res.json({
+    employee: employeeSafe(employee),
+    start: dateLondon(startDate),
+    end: dateLondon(endDate),
+    days
+  });
 });
 
 app.get('/api/reports/weekly', adminOnly, (req, res) => {

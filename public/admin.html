@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ClockFlow Admin</title>
-  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/style.css?v=20260411final" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
@@ -14,27 +14,26 @@
       <h1>Admin Login</h1>
       <label for="adminPassword">Password</label>
       <input id="adminPassword" type="password" placeholder="Enter admin password" />
-      <button class="btn btn-refresh full-mobile-btn" id="loginBtn" style="margin-top:18px;">Login</button>
+      <button class="btn btn-refresh" id="loginBtn" style="margin-top:18px;width:100%;">Login</button>
       <div class="message" id="loginMessage"></div>
       <a class="link" href="/mobile.html">Back to Mobile</a>
     </div>
 
     <div class="card admin-card" id="adminContent" style="display:none;">
       <div class="eyebrow">CLOCKFLOW</div>
-      <div class="admin-topbar">
+      <div class="admin-topbar admin-topbar-split">
         <div>
           <h1 style="margin:0;">Admin Panel</h1>
-          <div class="small">Mobile-friendly layout with working logs, payroll and GPS map.</div>
+          <div class="small admin-subtitle">Mobile-friendly layout with working logs, payroll and GPS map.</div>
         </div>
-        <div class="button-inline">
-          <button class="btn btn-muted slim-btn" id="logoutBtn" type="button">Logout</button>
-        </div>
+        <button class="btn btn-muted slim-btn" id="logoutBtn" type="button">Logout</button>
       </div>
 
-      <div class="admin-nav-wrap">
-        <button class="btn btn-refresh slim-btn admin-nav-btn active" data-view="dashboard">Today</button>
+      <div class="button-inline admin-nav-wrap top-gap-small">
+        <button class="btn btn-refresh slim-btn admin-nav-btn active" data-view="today">Today</button>
         <button class="btn btn-refresh slim-btn admin-nav-btn" data-view="employees">Employees</button>
         <button class="btn btn-refresh slim-btn admin-nav-btn" data-view="add">Add / Edit</button>
+        <button class="btn btn-refresh slim-btn admin-nav-btn" data-view="timesheet">Timesheet</button>
         <button class="btn btn-refresh slim-btn admin-nav-btn" data-view="logs">Logs</button>
         <button class="btn btn-refresh slim-btn admin-nav-btn" data-view="failed">Failed</button>
         <button class="btn btn-refresh slim-btn admin-nav-btn" data-view="payroll">Payroll</button>
@@ -42,21 +41,24 @@
         <button class="btn btn-refresh slim-btn" id="backupBtn">Backup All</button>
       </div>
 
-      <div class="admin-view active" id="view-dashboard">
-        <div class="mobile-quick-actions">
-          <button class="quick-action" data-view-jump="employees">Employees</button>
-          <button class="quick-action" data-view-jump="add">Add / Edit</button>
-          <button class="quick-action" data-view-jump="logs">Logs</button>
-          <button class="quick-action" data-view-jump="failed">Failed</button>
-          <button class="quick-action" data-view-jump="payroll">Payroll</button>
-          <button class="quick-action" data-view-jump="map">GPS Map</button>
-        </div>
-
-        <div class="stats-grid top-gap">
-          <div class="stat-card"><span class="stat-label">Clocked in</span><strong id="dashClockedIn">0</strong></div>
-          <div class="stat-card"><span class="stat-label">Clocked out</span><strong id="dashClockedOut">0</strong></div>
-          <div class="stat-card"><span class="stat-label">People</span><strong id="dashPeople">0</strong></div>
-          <div class="stat-card"><span class="stat-label">Hours today</span><strong id="dashHours">0.00</strong></div>
+      <div class="admin-view active" id="view-today">
+        <div class="today-stats top-gap">
+          <div class="stats-card">
+            <div class="small">Clocked in</div>
+            <div class="stats-value" id="todayClockedIn">0</div>
+          </div>
+          <div class="stats-card">
+            <div class="small">Clocked out</div>
+            <div class="stats-value" id="todayClockedOut">0</div>
+          </div>
+          <div class="stats-card">
+            <div class="small">People</div>
+            <div class="stats-value" id="todayPeople">0</div>
+          </div>
+          <div class="stats-card">
+            <div class="small">Hours today</div>
+            <div class="stats-value" id="todayHours">0.00</div>
+          </div>
         </div>
 
         <div class="panel section-card top-gap">
@@ -64,13 +66,12 @@
             <h2 style="margin:0;">Today's Dashboard</h2>
             <button class="btn btn-refresh slim-btn" id="refreshDashboardBtn">Refresh</button>
           </div>
-          <div class="table-wrap desktop-only">
+          <div class="table-wrap">
             <table>
               <thead><tr><th>Name</th><th>Site</th><th>Hours</th><th>Status</th><th>First in</th><th>Last out</th></tr></thead>
               <tbody id="dashboardBody"><tr><td colspan="6">No data</td></tr></tbody>
             </table>
           </div>
-          <div class="mobile-cards" id="dashboardCards"></div>
         </div>
       </div>
 
@@ -80,15 +81,21 @@
             <h2 style="margin:0;">Employees</h2>
             <button class="btn btn-refresh slim-btn" id="refreshEmployeesBtn">Refresh</button>
           </div>
-          <div class="table-wrap desktop-only">
+          <div class="table-wrap">
             <table>
               <thead>
-                <tr><th>Name</th><th>Login</th><th>Site</th><th>Pay</th><th>Clock</th><th>Action</th></tr>
+                <tr>
+                  <th>Name</th>
+                  <th>Login</th>
+                  <th>Site</th>
+                  <th>Pay</th>
+                  <th>Clock</th>
+                  <th>Action</th>
+                </tr>
               </thead>
               <tbody id="employeesBody"><tr><td colspan="6">No employees</td></tr></tbody>
             </table>
           </div>
-          <div class="mobile-cards" id="employeesCards"></div>
         </div>
       </div>
 
@@ -124,13 +131,17 @@
               <label class="check"><input id="empMustClock" type="checkbox" checked /> Must clock in / out</label>
               <label class="check"><input id="empMustChangePin" type="checkbox" /> Must change PIN on first login</label>
             </div>
-            <div class="button-inline stack-mobile">
+            <div class="button-inline">
               <button class="btn btn-refresh" id="saveEmployeeBtn">Save employee</button>
               <button class="btn btn-muted" id="cancelEmployeeBtn" type="button">Clear</button>
             </div>
             <div class="message" id="adminMessage"></div>
           </div>
+        </div>
+      </div>
 
+      <div class="admin-view" id="view-timesheet">
+        <div class="admin-grid top-gap admin-grid-timesheet">
           <div class="panel section-card">
             <h2 id="manualFormTitle">Manual Clock Entry</h2>
             <input type="hidden" id="manualLogId" />
@@ -144,11 +155,27 @@
             <input id="manualTime" type="time" />
             <label>Notes</label>
             <input id="manualNotes" type="text" placeholder="Optional note" />
-            <div class="button-inline stack-mobile">
+            <div class="button-inline">
               <button class="btn btn-refresh" id="saveManualBtn">Save entry</button>
               <button class="btn btn-muted" id="cancelManualBtn" type="button">Clear</button>
             </div>
             <div class="message" id="manualMessage"></div>
+          </div>
+
+          <div class="panel section-card">
+            <div class="admin-header">
+              <h2 style="margin:0;">Employee Timesheet</h2>
+              <div class="button-inline wrap-inline">
+                <select id="timesheetEmployee"></select>
+                <input id="timesheetStart" type="date" />
+                <input id="timesheetEnd" type="date" />
+                <button class="btn btn-refresh slim-btn" id="refreshTimesheetBtn">Load</button>
+              </div>
+            </div>
+            <div id="timesheetSummary" class="site-note" style="margin-bottom:12px;"></div>
+            <div id="timesheetDays" class="stack-list">
+              <div class="stack-empty">No timesheet loaded.</div>
+            </div>
           </div>
         </div>
       </div>
@@ -164,13 +191,12 @@
             </div>
           </div>
           <div class="small" id="logsPageInfo"></div>
-          <div class="table-wrap desktop-only">
+          <div class="table-wrap">
             <table>
               <thead><tr><th>Name</th><th>Site</th><th>Action</th><th>Time</th><th>GPS</th><th>Source</th><th>Action</th></tr></thead>
               <tbody id="logsBody"><tr><td colspan="7">No logs yet</td></tr></tbody>
             </table>
           </div>
-          <div class="mobile-cards" id="logsCards"></div>
         </div>
       </div>
 
@@ -185,13 +211,12 @@
             </div>
           </div>
           <div class="small" id="failedPageInfo"></div>
-          <div class="table-wrap desktop-only">
+          <div class="table-wrap">
             <table>
               <thead><tr><th>Name</th><th>Reason</th><th>Action</th><th>Time</th><th>GPS</th></tr></thead>
               <tbody id="failedBody"><tr><td colspan="5">No failed attempts</td></tr></tbody>
             </table>
           </div>
-          <div class="mobile-cards" id="failedCards"></div>
         </div>
       </div>
 
@@ -206,13 +231,12 @@
               <button class="btn btn-refresh slim-btn" id="pdfBtn">PDF</button>
             </div>
           </div>
-          <div class="table-wrap desktop-only">
+          <div class="table-wrap">
             <table>
               <thead><tr><th>Name</th><th>Site</th><th>Type</th><th>Rate</th><th>Lunch</th><th>Hours</th><th>Advance</th><th>Total</th></tr></thead>
               <tbody id="reportBody"><tr><td colspan="8">No report yet</td></tr></tbody>
             </table>
           </div>
-          <div class="mobile-cards" id="reportCards"></div>
         </div>
       </div>
 
@@ -230,6 +254,6 @@
     </div>
   </div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="/admin.js"></script>
+  <script src="/admin.js?v=20260411final"></script>
 </body>
 </html>

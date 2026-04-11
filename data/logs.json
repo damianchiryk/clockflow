@@ -2678,5 +2678,1045 @@
     },
     "source": "mobile",
     "notes": ""
+  },
+  {
+    "id": "17757725183910065b4",
+    "employeeId": "damian",
+    "name": "Damian",
+    "site": "VRS Mechanical",
+    "siteId": "vrs-mechanical",
+    "action": "in",
+    "time": "2026-04-09T22:08:38.391Z",
+    "localTime": "09/04/2026, 23:08:38",
+    "lat": null,
+    "lng": null,
+    "geo": {
+      "required": false,
+      "allowed": true,
+      "distanceMeters": null,
+      "siteName": "VRS Mechanical"
+    },
+    "source": "mobile",
+    "notes": ""
+  },
+  {
+    "id": "17757736909777a2e97",
+    "employeeId": "damian",
+    "name": "Damian",
+    "site": "VRS Mechanical",
+    "siteId": "vrs-mechanical",
+    "action": "out",
+    "time": "2026-04-09T22:28:10.977Z",
+    "localTime": "09/04/2026, 23:28:10",
+    "lat": null,
+    "lng": null,
+    "geo": {
+      "required": false,
+      "allowed": true,
+      "distanceMeters": null,
+      "siteName": "VRS Mechanical"
+    },
+    "source": "mobile",
+    "notes": ""
+  },
+  {
+    "id": "1775796361495f511a5",
+    "employeeId": "marcin",
+    "name": "Marcin Grabowski",
+    "site": "VRS Bodyshop",
+    "siteId": "vrs-east-tilbury",
+    "action": "in",
+    "time": "2026-04-10T04:46:01.495Z",
+    "localTime": "10/04/2026, 05:46:01",
+    "lat": 51.4788089,
+    "lng": 0.4143979,
+    "geo": {
+      "required": true,
+      "allowed": true,
+      "distanceMeters": 43,
+      "siteName": "VRS Bodyshop"
+    },
+    "source": "mobile",
+    "notes": ""
+  },
+  {
+    "id": "1775796451097729fcb",
+    "employeeId": "barry",
+    "name": "Barry Addison",
+    "site": "VRS Bodyshop",
+    "siteId": "vrs-east-tilbury",
+    "action": "in",
+    "time": "2026-04-10T04:47:31.097Z",
+    "localTime": "10/04/2026, 05:47:31",
+    "lat": 51.47891689230955,
+    "lng": 0.41358946936074004,
+    "geo": {
+      "required": true,
+      "allowed": true,
+      "distanceMeters": 25,
+      "siteName": "VRS Bodyshop"
+    },
+    "source": "mobile",
+    "notes": ""
+  },
+  {
+    "id": "17757972394180905fd",
+    "employeeId": "dawid",
+    "name": "Dawid Grabowski",
+    "site": "VRS Bodyshop",
+    "siteId": "vrs-east-tilbury",
+    "action": "in",
+    "time": "2026-04-10T05:00:39.418Z",
+    "localTime": "10/04/2026, 06:00:39",
+    "lat": 51.47877737207423,
+    "lng": 0.41361600471482457,
+    "geo": {
+      "required": true,
+      "allowed": true,
+      "distanceMeters": 13,
+      "siteName": "VRS Bodyshop"
+    },
+    "source": "mobile",
+    "notes": ""
+  },
+  {
+    "id": "177579972626876bd63",
+    "employeeId": "hitesh",
+    "name": "Hitesh Chawda",
+    "site": "VRS Bodyshop",
+    "siteId": "vrs-east-tilbury",
+    "action": "in",
+    "time": "2026-04-10T05:42:06.268Z",
+    "localTime": "10/04/2026, 06:42:06",
+    "lat": 51.479001385000885,
+    "lng": 0.4144007507946572,
+    "geo": {
+      "required": true,
+      "allowed": true,
+      "distanceMeters": 52,
+      "siteName": "VRS Bodyshop"
+    },
+    "source": "mobile",
+    "notes": ""
+  },
+  {
+    "id": "1775800167957a52d51",
+    "employeeId": "alfie",
+    "name": "Alfie Phillips",
+    "site": "ALK Bodyshop",
+    "siteId": "alk-grays",
+    "action": "in",
+    "time": "2026-04-10T05:49:27.957Z",
+    "localTime": "10/04/2026, 06:49:27",
+    "lat": 51.4838664,
+    "lng": 0.3094659,
+    "geo": {
+      "required": true,
+      "allowed": true,
+      "distanceMeters": 5,
+      "siteName": "ALK Bodyshop"
+    },
+    "source": "mobile",
+    "notes": ""
+  },
+  {
+    "id": "177580019914787229e",
+    "employeeId": "cristiano",
+    "name": "Cristiano De Souza",
+    "site": "ALK Bodyshop",
+    "siteId": "alk-grays",
+    "action": "in",
+    "time": "2026-04-10T05:49:59.147Z",
+    "localTime": "10/04/2026, 06:49:59",
+    "lat": 51.4840823,
+    "lng": 0.3097625,
+    "geo": {
+      "required": true,
+      "allowed": true,
+      "distanceMeters": 35,
+      "siteName": "ALK Bodyshop"
+    },
+    "source": "mobile",
+    "notes": ""
+  },
+  {
+    "id": "17758013500727802f0",
+    "employeeId": "nathan",
+    "name": "Nathan Anienzo",
+    "site": "VRS Bodyshop",
+    "siteId": "vrs-east-tilbury",
+    "action": "in",
+    "time": "2026-04-10T06:09:10.072Z",
+    "localTime": "10/04/2026, 07:09:10",
+    "lat": 51.47889515264707,
+    "lng": 0.413871954836151,
+    "geo": {
+      "required": true,
+      "allowed": true,
+      "distanceMeters": 19,
+      "siteName": "VRS Bodyshop"
+    },
+    "source": "mobile",
+    "notes": ""
+  },
+  {
+    "id": "1775801533332cd0180",
+    "employeeId": "piotr",
+    "name": "Piotr Lejwoda",
+    "site": "VRS Bodyshop",
+    "siteId": "vrs-east-tilbury",
+    "action": "in",
+    "time": "2026-04-10T06:12:13.332Z",
+    "localTime": "10/04/2026, 07:12:13",
+    "lat": 51.4789184,
+    "lng": 0.4138458,
+    "geo": {
+      "required": true,
+      "allowed": true,
+      "distanceMeters": 21,
+      "siteName": "VRS Bodyshop"
+    },
+    "source": "mobile",
+    "notes": ""
+  },
+  {
+    "id": "17758028125191379bd",
+    "employeeId": "maycon",
+    "name": "Maycon",
+    "site": "ALK Bodyshop",
+    "siteId": "alk-grays",
+    "action": "out",
+    "time": "2026-04-10T17:45:00.000Z",
+    "localTime": "10/04/2026, 18:45:00",
+    "lat": 51.48379357992612,
+    "lng": 0.3095030172002023,
+    "geo": {
+      "required": true,
+      "allowed": true,
+      "distanceMeters": 4,
+      "siteName": "ALK Bodyshop"
+    },
+    "source": "mobile",
+    "notes": ""
+  },
+  {
+    "id": "1775803217783661c27",
+    "employeeId": "rob",
+    "name": "Rob Francis",
+    "site": "ALK Bodyshop",
+    "siteId": "alk-bodyshop",
+    "action": "in",
+    "time": "2026-04-10T06:40:17.783Z",
+    "localTime": "10/04/2026, 07:40:17",
+    "lat": null,
+    "lng": null,
+    "geo": {
+      "required": false,
+      "allowed": true,
+      "distanceMeters": null,
+      "siteName": "ALK Bodyshop"
+    },
+    "source": "mobile",
+    "notes": ""
+  },
+  {
+    "id": "177580396182483f4e3",
+    "employeeId": "konrad",
+    "name": "Konrad Dabrowski",
+    "site": "VRS Bodyshop",
+    "siteId": "vrs-east-tilbury",
+    "action": "in",
+    "time": "2026-04-10T06:52:41.824Z",
+    "localTime": "10/04/2026, 07:52:41",
+    "lat": 51.4787211,
+    "lng": 0.4144875,
+    "geo": {
+      "required": true,
+      "allowed": true,
+      "distanceMeters": 48,
+      "siteName": "VRS Bodyshop"
+    },
+    "source": "mobile",
+    "notes": ""
+  },
+  {
+    "id": "1775803971134db724e",
+    "employeeId": "carlos",
+    "name": "Carlos Guimaraes",
+    "site": "VRS Bodyshop",
+    "siteId": "vrs-east-tilbury",
+    "action": "in",
+    "time": "2026-04-10T06:52:51.134Z",
+    "localTime": "10/04/2026, 07:52:51",
+    "lat": 51.47900427408269,
+    "lng": 0.413706714446547,
+    "geo": {
+      "required": true,
+      "allowed": true,
+      "distanceMeters": 31,
+      "siteName": "VRS Bodyshop"
+    },
+    "source": "mobile",
+    "notes": ""
+  },
+  {
+    "id": "17758043033055bea4a",
+    "employeeId": "jonas",
+    "name": "Jonas De Souza",
+    "site": "ALK Bodyshop",
+    "siteId": "alk-grays",
+    "action": "in",
+    "time": "2026-04-10T06:58:23.305Z",
+    "localTime": "10/04/2026, 07:58:23",
+    "lat": 51.4838126,
+    "lng": 0.3094919,
+    "geo": {
+      "required": true,
+      "allowed": true,
+      "distanceMeters": 2,
+      "siteName": "ALK Bodyshop"
+    },
+    "source": "mobile",
+    "notes": ""
+  },
+  {
+    "id": "1775804430405fd66b6",
+    "employeeId": "jethron",
+    "name": "Jethron Gulla",
+    "site": "ALK Bodyshop",
+    "siteId": "alk-grays",
+    "action": "in",
+    "time": "2026-04-10T07:00:30.405Z",
+    "localTime": "10/04/2026, 08:00:30",
+    "lat": 51.48403763325707,
+    "lng": 0.30952176655130337,
+    "geo": {
+      "required": true,
+      "allowed": true,
+      "distanceMeters": 24,
+      "siteName": "ALK Bodyshop"
+    },
+    "source": "mobile",
+    "notes": ""
+  },
+  {
+    "id": "177580457006912a821",
+    "employeeId": "max",
+    "name": "Max Gibbs",
+    "site": "VRS Mechanical",
+    "siteId": "vrs-mechanical",
+    "action": "in",
+    "time": "2026-04-10T07:02:50.069Z",
+    "localTime": "10/04/2026, 08:02:50",
+    "lat": 51.4788394,
+    "lng": 0.4138284,
+    "geo": {
+      "required": true,
+      "allowed": true,
+      "distanceMeters": 12,
+      "siteName": "VRS Mechanical"
+    },
+    "source": "mobile",
+    "notes": ""
+  },
+  {
+    "id": "1775804575096d7f104",
+    "employeeId": "alex",
+    "name": "Alex",
+    "site": "ALK Bodyshop",
+    "siteId": "alk-grays",
+    "action": "in",
+    "time": "2026-04-10T07:02:55.095Z",
+    "localTime": "10/04/2026, 08:02:55",
+    "lat": 51.484223388706575,
+    "lng": 0.30963875559326093,
+    "geo": {
+      "required": true,
+      "allowed": true,
+      "distanceMeters": 46,
+      "siteName": "ALK Bodyshop"
+    },
+    "source": "mobile",
+    "notes": ""
+  },
+  {
+    "id": "177580464238519f9ad",
+    "employeeId": "sergiu",
+    "name": "Sergiu Antoci",
+    "site": "VRS Mechanical",
+    "siteId": "vrs-mechanical",
+    "action": "in",
+    "time": "2026-04-10T07:04:02.385Z",
+    "localTime": "10/04/2026, 08:04:02",
+    "lat": 51.47880950094388,
+    "lng": 0.4139777074271037,
+    "geo": {
+      "required": true,
+      "allowed": true,
+      "distanceMeters": 16,
+      "siteName": "VRS Mechanical"
+    },
+    "source": "mobile",
+    "notes": ""
+  },
+  {
+    "id": "177580540594104fab7",
+    "employeeId": "damian",
+    "name": "Damian",
+    "site": "VRS Mechanical",
+    "siteId": "vrs-mechanical",
+    "action": "in",
+    "time": "2026-04-10T07:02:00.000Z",
+    "localTime": "10/04/2026, 08:02:00",
+    "lat": null,
+    "lng": null,
+    "geo": {
+      "required": false,
+      "allowed": true,
+      "distanceMeters": null,
+      "siteName": "VRS Mechanical"
+    },
+    "source": "manual",
+    "notes": ""
+  },
+  {
+    "id": "1775805438277925974",
+    "employeeId": "jakub",
+    "name": "Jakub Chiryk",
+    "site": "VRS Mechanical",
+    "siteId": "vrs-mechanical",
+    "action": "in",
+    "time": "2026-04-10T07:02:00.000Z",
+    "localTime": "10/04/2026, 08:02:00",
+    "lat": null,
+    "lng": null,
+    "geo": {
+      "required": false,
+      "allowed": true,
+      "distanceMeters": null,
+      "siteName": "VRS Mechanical"
+    },
+    "source": "manual",
+    "notes": ""
+  },
+  {
+    "id": "17758239794646e27c3",
+    "employeeId": "hitesh",
+    "name": "Hitesh Chawda",
+    "site": "VRS Bodyshop",
+    "siteId": "vrs-east-tilbury",
+    "action": "out",
+    "time": "2026-04-10T12:26:19.464Z",
+    "localTime": "10/04/2026, 13:26:19",
+    "lat": 51.478843735060344,
+    "lng": 0.4138653422053892,
+    "geo": {
+      "required": true,
+      "allowed": true,
+      "distanceMeters": 14,
+      "siteName": "VRS Bodyshop"
+    },
+    "source": "mobile",
+    "notes": ""
+  },
+  {
+    "id": "1775832981719c66010",
+    "employeeId": "yogesh",
+    "name": "Yogesh Pitrola",
+    "site": "ALK Bodyshop",
+    "siteId": "alk-grays",
+    "action": "in",
+    "time": "2026-04-10T08:16:00.000Z",
+    "localTime": "10/04/2026, 09:16:00",
+    "lat": null,
+    "lng": null,
+    "geo": {
+      "required": false,
+      "allowed": true,
+      "distanceMeters": null,
+      "siteName": "ALK Bodyshop"
+    },
+    "source": "manual",
+    "notes": ""
+  },
+  {
+    "id": "1775832986513cf8f32",
+    "employeeId": "yogesh",
+    "name": "Yogesh Pitrola",
+    "site": "ALK Bodyshop",
+    "siteId": "alk-grays",
+    "action": "out",
+    "time": "2026-04-10T15:56:00.000Z",
+    "localTime": "10/04/2026, 16:56:00",
+    "lat": null,
+    "lng": null,
+    "geo": {
+      "required": false,
+      "allowed": true,
+      "distanceMeters": null,
+      "siteName": "ALK Bodyshop"
+    },
+    "source": "manual",
+    "notes": ""
+  },
+  {
+    "id": "1775833024244d36633",
+    "employeeId": "wioleta2",
+    "name": "Wioleta Chiryk",
+    "site": "ALK Bodyshop",
+    "siteId": "alk-grays",
+    "action": "in",
+    "time": "2026-04-10T08:56:00.000Z",
+    "localTime": "10/04/2026, 09:56:00",
+    "lat": null,
+    "lng": null,
+    "geo": {
+      "required": false,
+      "allowed": true,
+      "distanceMeters": null,
+      "siteName": "ALK Bodyshop"
+    },
+    "source": "manual",
+    "notes": ""
+  },
+  {
+    "id": "1775833028412a86467",
+    "employeeId": "wioleta2",
+    "name": "Wioleta Chiryk",
+    "site": "ALK Bodyshop",
+    "siteId": "alk-grays",
+    "action": "out",
+    "time": "2026-04-10T15:57:00.000Z",
+    "localTime": "10/04/2026, 16:57:00",
+    "lat": null,
+    "lng": null,
+    "geo": {
+      "required": false,
+      "allowed": true,
+      "distanceMeters": null,
+      "siteName": "ALK Bodyshop"
+    },
+    "source": "manual",
+    "notes": ""
+  },
+  {
+    "id": "17758330382129e2e85",
+    "employeeId": "wioleta1",
+    "name": "Wioleta Chiryk",
+    "site": "VRS Mechanical",
+    "siteId": "vrs-mechanical",
+    "action": "in",
+    "time": "2026-04-10T08:57:00.000Z",
+    "localTime": "10/04/2026, 09:57:00",
+    "lat": null,
+    "lng": null,
+    "geo": {
+      "required": false,
+      "allowed": true,
+      "distanceMeters": null,
+      "siteName": "VRS Mechanical"
+    },
+    "source": "manual",
+    "notes": ""
+  },
+  {
+    "id": "1775833041580fbe7c5",
+    "employeeId": "wioleta1",
+    "name": "Wioleta Chiryk",
+    "site": "VRS Mechanical",
+    "siteId": "vrs-mechanical",
+    "action": "out",
+    "time": "2026-04-10T15:57:00.000Z",
+    "localTime": "10/04/2026, 16:57:00",
+    "lat": null,
+    "lng": null,
+    "geo": {
+      "required": false,
+      "allowed": true,
+      "distanceMeters": null,
+      "siteName": "VRS Mechanical"
+    },
+    "source": "manual",
+    "notes": ""
+  },
+  {
+    "id": "17758332571075276b8",
+    "employeeId": "barry",
+    "name": "Barry Addison",
+    "site": "VRS Bodyshop",
+    "siteId": "vrs-east-tilbury",
+    "action": "out",
+    "time": "2026-04-10T15:00:57.107Z",
+    "localTime": "10/04/2026, 16:00:57",
+    "lat": 51.478768760666014,
+    "lng": 0.413748013397753,
+    "geo": {
+      "required": true,
+      "allowed": true,
+      "distanceMeters": 5,
+      "siteName": "VRS Bodyshop"
+    },
+    "source": "mobile",
+    "notes": ""
+  },
+  {
+    "id": "1775836857834d18302",
+    "employeeId": "sergiu",
+    "name": "Sergiu Antoci",
+    "site": "VRS Mechanical",
+    "siteId": "vrs-mechanical",
+    "action": "out",
+    "time": "2026-04-10T16:00:57.834Z",
+    "localTime": "10/04/2026, 17:00:57",
+    "lat": 51.47886127907947,
+    "lng": 0.4132521366019198,
+    "geo": {
+      "required": true,
+      "allowed": true,
+      "distanceMeters": 40,
+      "siteName": "VRS Mechanical"
+    },
+    "source": "mobile",
+    "notes": ""
+  },
+  {
+    "id": "1775836881452a2dbae",
+    "employeeId": "alex",
+    "name": "Alex",
+    "site": "ALK Bodyshop",
+    "siteId": "alk-grays",
+    "action": "out",
+    "time": "2026-04-10T16:01:21.452Z",
+    "localTime": "10/04/2026, 17:01:21",
+    "lat": 51.48399581005133,
+    "lng": 0.30952346734010333,
+    "geo": {
+      "required": true,
+      "allowed": true,
+      "distanceMeters": 19,
+      "siteName": "ALK Bodyshop"
+    },
+    "source": "mobile",
+    "notes": ""
+  },
+  {
+    "id": "1775836930259b967d3",
+    "employeeId": "jonas",
+    "name": "Jonas De Souza",
+    "site": "ALK Bodyshop",
+    "siteId": "alk-grays",
+    "action": "out",
+    "time": "2026-04-10T16:02:10.259Z",
+    "localTime": "10/04/2026, 17:02:10",
+    "lat": 51.4841694,
+    "lng": 0.3097744,
+    "geo": {
+      "required": true,
+      "allowed": true,
+      "distanceMeters": 44,
+      "siteName": "ALK Bodyshop"
+    },
+    "source": "mobile",
+    "notes": ""
+  },
+  {
+    "id": "1775837072486211250",
+    "employeeId": "cristiano",
+    "name": "Cristiano De Souza",
+    "site": "ALK Bodyshop",
+    "siteId": "alk-grays",
+    "action": "out",
+    "time": "2026-04-10T16:04:32.486Z",
+    "localTime": "10/04/2026, 17:04:32",
+    "lat": 51.4839852,
+    "lng": 0.3095892,
+    "geo": {
+      "required": true,
+      "allowed": true,
+      "distanceMeters": 20,
+      "siteName": "ALK Bodyshop"
+    },
+    "source": "mobile",
+    "notes": ""
+  },
+  {
+    "id": "17758373679147e2417",
+    "employeeId": "dawid",
+    "name": "Dawid Grabowski",
+    "site": "VRS Bodyshop",
+    "siteId": "vrs-east-tilbury",
+    "action": "out",
+    "time": "2026-04-10T16:09:27.914Z",
+    "localTime": "10/04/2026, 17:09:27",
+    "lat": 51.478663241732924,
+    "lng": 0.4134911951382418,
+    "geo": {
+      "required": true,
+      "allowed": true,
+      "distanceMeters": 22,
+      "siteName": "VRS Bodyshop"
+    },
+    "source": "mobile",
+    "notes": ""
+  },
+  {
+    "id": "1775837399321b31e9d",
+    "employeeId": "marcin",
+    "name": "Marcin Grabowski",
+    "site": "VRS Bodyshop",
+    "siteId": "vrs-east-tilbury",
+    "action": "out",
+    "time": "2026-04-10T16:09:59.321Z",
+    "localTime": "10/04/2026, 17:09:59",
+    "lat": 51.478659,
+    "lng": 0.4135448,
+    "geo": {
+      "required": true,
+      "allowed": true,
+      "distanceMeters": 19,
+      "siteName": "VRS Bodyshop"
+    },
+    "source": "mobile",
+    "notes": ""
+  },
+  {
+    "id": "177583780714017737b",
+    "employeeId": "carlos",
+    "name": "Carlos Guimaraes",
+    "site": "VRS Bodyshop",
+    "siteId": "vrs-east-tilbury",
+    "action": "out",
+    "time": "2026-04-10T16:16:47.140Z",
+    "localTime": "10/04/2026, 17:16:47",
+    "lat": 51.47898758675836,
+    "lng": 0.41382846091301534,
+    "geo": {
+      "required": true,
+      "allowed": true,
+      "distanceMeters": 29,
+      "siteName": "VRS Bodyshop"
+    },
+    "source": "mobile",
+    "notes": ""
+  },
+  {
+    "id": "1775837867806b221ee",
+    "employeeId": "nathan",
+    "name": "Nathan Anienzo",
+    "site": "VRS Bodyshop",
+    "siteId": "vrs-east-tilbury",
+    "action": "out",
+    "time": "2026-04-10T16:17:47.806Z",
+    "localTime": "10/04/2026, 17:17:47",
+    "lat": 51.4788197416532,
+    "lng": 0.4137576893021377,
+    "geo": {
+      "required": true,
+      "allowed": true,
+      "distanceMeters": 10,
+      "siteName": "VRS Bodyshop"
+    },
+    "source": "mobile",
+    "notes": ""
+  },
+  {
+    "id": "1775838096304a3d34f",
+    "employeeId": "damian",
+    "name": "Damian",
+    "site": "VRS Mechanical",
+    "siteId": "vrs-mechanical",
+    "action": "out",
+    "time": "2026-04-10T17:13:00.000Z",
+    "localTime": "10/04/2026, 18:13:00",
+    "lat": null,
+    "lng": null,
+    "geo": {
+      "required": false,
+      "allowed": true,
+      "distanceMeters": null,
+      "siteName": "VRS Mechanical"
+    },
+    "source": "manual",
+    "notes": ""
+  },
+  {
+    "id": "17758381548363fa0b8",
+    "employeeId": "piotr",
+    "name": "Piotr Lejwoda",
+    "site": "VRS Bodyshop",
+    "siteId": "vrs-east-tilbury",
+    "action": "out",
+    "time": "2026-04-10T17:13:00.000Z",
+    "localTime": "10/04/2026, 18:13:00",
+    "lat": null,
+    "lng": null,
+    "geo": {
+      "required": false,
+      "allowed": true,
+      "distanceMeters": null,
+      "siteName": "VRS Bodyshop"
+    },
+    "source": "manual",
+    "notes": ""
+  },
+  {
+    "id": "177584001696799cbb3",
+    "employeeId": "alfie",
+    "name": "Alfie Phillips",
+    "site": "ALK Bodyshop",
+    "siteId": "alk-grays",
+    "action": "out",
+    "time": "2026-04-10T16:40:00.000Z",
+    "localTime": "10/04/2026, 17:40:00",
+    "lat": null,
+    "lng": null,
+    "geo": {
+      "required": false,
+      "allowed": true,
+      "distanceMeters": null,
+      "siteName": "ALK Bodyshop"
+    },
+    "source": "manual",
+    "notes": ""
+  },
+  {
+    "id": "1775840456439d7f73b",
+    "employeeId": "jethron",
+    "name": "Jethron Gulla",
+    "site": "ALK Bodyshop",
+    "siteId": "alk-grays",
+    "action": "out",
+    "time": "2026-04-10T18:00:00.000Z",
+    "localTime": "10/04/2026, 19:00:00",
+    "lat": null,
+    "lng": null,
+    "geo": {
+      "required": false,
+      "allowed": true,
+      "distanceMeters": null,
+      "siteName": "ALK Bodyshop"
+    },
+    "source": "manual",
+    "notes": ""
+  },
+  {
+    "id": "17758404909591c5344",
+    "employeeId": "max",
+    "name": "Max Gibbs",
+    "site": "VRS Mechanical",
+    "siteId": "vrs-mechanical",
+    "action": "out",
+    "time": "2026-04-10T17:12:00.000Z",
+    "localTime": "10/04/2026, 18:12:00",
+    "lat": null,
+    "lng": null,
+    "geo": {
+      "required": false,
+      "allowed": true,
+      "distanceMeters": null,
+      "siteName": "VRS Mechanical"
+    },
+    "source": "manual",
+    "notes": ""
+  },
+  {
+    "id": "17758406684659220d6",
+    "employeeId": "jethron",
+    "name": "Jethron Gulla",
+    "site": "ALK Bodyshop",
+    "siteId": "alk-grays",
+    "action": "out",
+    "time": "2026-04-10T17:00:00.000Z",
+    "localTime": "10/04/2026, 18:00:00",
+    "lat": null,
+    "lng": null,
+    "geo": {
+      "required": false,
+      "allowed": true,
+      "distanceMeters": null,
+      "siteName": "ALK Bodyshop"
+    },
+    "source": "manual",
+    "notes": ""
+  },
+  {
+    "id": "1775840686213fb0c53",
+    "employeeId": "jakub",
+    "name": "Jakub Chiryk",
+    "site": "VRS Mechanical",
+    "siteId": "vrs-mechanical",
+    "action": "out",
+    "time": "2026-04-10T16:10:00.000Z",
+    "localTime": "10/04/2026, 17:10:00",
+    "lat": null,
+    "lng": null,
+    "geo": {
+      "required": false,
+      "allowed": true,
+      "distanceMeters": null,
+      "siteName": "VRS Mechanical"
+    },
+    "source": "manual",
+    "notes": ""
+  },
+  {
+    "id": "17758407237027df7b4",
+    "employeeId": "rob",
+    "name": "Rob Francis",
+    "site": "ALK Bodyshop",
+    "siteId": "alk-bodyshop",
+    "action": "out",
+    "time": "2026-04-10T16:00:00.000Z",
+    "localTime": "10/04/2026, 17:00:00",
+    "lat": null,
+    "lng": null,
+    "geo": {
+      "required": false,
+      "allowed": true,
+      "distanceMeters": null,
+      "siteName": "ALK Bodyshop"
+    },
+    "source": "manual",
+    "notes": ""
+  },
+  {
+    "id": "1775840822390aee572",
+    "employeeId": "konrad",
+    "name": "Konrad Dabrowski",
+    "site": "VRS Bodyshop",
+    "siteId": "vrs-east-tilbury",
+    "action": "out",
+    "time": "2026-04-10T16:05:00.000Z",
+    "localTime": "10/04/2026, 17:05:00",
+    "lat": null,
+    "lng": null,
+    "geo": {
+      "required": false,
+      "allowed": true,
+      "distanceMeters": null,
+      "siteName": "VRS Bodyshop"
+    },
+    "source": "manual",
+    "notes": ""
+  },
+  {
+    "id": "1775842099376084a10",
+    "employeeId": "damian",
+    "name": "Damian",
+    "site": "VRS Mechanical",
+    "siteId": "vrs-mechanical",
+    "action": "in",
+    "time": "2026-04-10T17:28:19.376Z",
+    "localTime": "10/04/2026, 18:28:19",
+    "lat": null,
+    "lng": null,
+    "geo": {
+      "required": false,
+      "allowed": true,
+      "distanceMeters": null,
+      "siteName": "VRS Mechanical"
+    },
+    "source": "mobile",
+    "notes": ""
+  },
+  {
+    "id": "17758421061312d91e3",
+    "employeeId": "damian",
+    "name": "Damian",
+    "site": "VRS Mechanical",
+    "siteId": "vrs-mechanical",
+    "action": "out",
+    "time": "2026-04-10T17:28:26.131Z",
+    "localTime": "10/04/2026, 18:28:26",
+    "lat": null,
+    "lng": null,
+    "geo": {
+      "required": false,
+      "allowed": true,
+      "distanceMeters": null,
+      "siteName": "VRS Mechanical"
+    },
+    "source": "mobile",
+    "notes": ""
+  },
+  {
+    "id": "17758427993362c2082",
+    "employeeId": "damian",
+    "name": "Damian",
+    "site": "VRS Mechanical",
+    "siteId": "vrs-mechanical",
+    "action": "in",
+    "time": "2026-04-10T17:39:59.336Z",
+    "localTime": "10/04/2026, 18:39:59",
+    "lat": null,
+    "lng": null,
+    "geo": {
+      "required": false,
+      "allowed": true,
+      "distanceMeters": null,
+      "siteName": "VRS Mechanical"
+    },
+    "source": "mobile",
+    "notes": ""
+  },
+  {
+    "id": "17758829534368864ed",
+    "employeeId": "dawid",
+    "name": "Dawid Grabowski",
+    "site": "VRS Bodyshop",
+    "siteId": "vrs-east-tilbury",
+    "action": "in",
+    "time": "2026-04-11T04:49:13.436Z",
+    "localTime": "11/04/2026, 05:49:13",
+    "lat": 51.47879322130895,
+    "lng": 0.4139331422478118,
+    "geo": {
+      "required": true,
+      "allowed": true,
+      "distanceMeters": 12,
+      "siteName": "VRS Bodyshop"
+    },
+    "source": "mobile",
+    "notes": ""
+  },
+  {
+    "id": "17758862318107f408f",
+    "employeeId": "marcin",
+    "name": "Marcin Grabowski",
+    "site": "VRS Bodyshop",
+    "siteId": "vrs-east-tilbury",
+    "action": "in",
+    "time": "2026-04-11T05:43:51.810Z",
+    "localTime": "11/04/2026, 06:43:51",
+    "lat": 51.4786385,
+    "lng": 0.4137414,
+    "geo": {
+      "required": true,
+      "allowed": true,
+      "distanceMeters": 11,
+      "siteName": "VRS Bodyshop"
+    },
+    "source": "mobile",
+    "notes": ""
+  },
+  {
+    "id": "1775889798051b1a0fc",
+    "employeeId": "maycon",
+    "name": "Maycon",
+    "site": "ALK Bodyshop",
+    "siteId": "alk-grays",
+    "action": "out",
+    "time": "2026-04-10T17:45:00.000Z",
+    "localTime": "10/04/2026, 18:45:00",
+    "lat": null,
+    "lng": null,
+    "geo": {
+      "required": false,
+      "allowed": true,
+      "distanceMeters": null,
+      "siteName": "ALK Bodyshop"
+    },
+    "source": "manual",
+    "notes": ""
   }
 ]
