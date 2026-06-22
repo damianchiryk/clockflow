@@ -12,8 +12,22 @@ function getAdminPassword() {
 function getAdminUsername() {
   return sessionStorage.getItem('adminUsername') || localStorage.getItem('adminUsername') || 'admin';
 }
+function getMobileAdminToken() {
+  try {
+    const mobileAuth = JSON.parse(localStorage.getItem('clockflowMobileAuth') || 'null');
+    return mobileAuth?.adminToken || '';
+  } catch { return ''; }
+}
+function getAdminToken() {
+  return sessionStorage.getItem('adminToken') || localStorage.getItem('adminToken') || getMobileAdminToken();
+}
 function adminHeaders(extra = {}) {
-  return { ...extra, 'x-admin-password': getAdminPassword() };
+  const headers = { ...extra };
+  const password = getAdminPassword();
+  const token = getAdminToken();
+  if (password) headers['x-admin-password'] = password;
+  if (token) headers['x-admin-token'] = token;
+  return headers;
 }
 function londonTime(value) {
   return new Date(value).toLocaleString('en-GB', {
@@ -78,6 +92,7 @@ function showAdminView(view) {
   if (btn) btn.classList.add('active');
   if (view === 'map' && map) setTimeout(() => map.invalidateSize(), 120);
   if (view === 'timesheet') fetchEmployees();
+  if (view === 'notifications') fetchPushSubscriptions();
 }
 
 function defaultWeekRange() {
@@ -140,6 +155,8 @@ async function login() {
   localStorage.setItem('adminUsername', username);
   sessionStorage.setItem('adminPassword', password);
   localStorage.setItem('adminPassword', password);
+  sessionStorage.removeItem('adminToken');
+  localStorage.removeItem('adminToken');
   qs('loginCard').style.display = 'none';
   qs('adminContent').style.display = 'block';
   await initAdmin();
@@ -540,6 +557,78 @@ function downloadBackup() {
   window.open(`/api/admin/backup/download?adminPassword=${password}`, '_blank');
 }
 
+
+async function fetchPushSubscriptions() {
+  const select = qs('pushEmployee');
+  const list = qs('pushDevicesList');
+  if (!select || !list) return;
+  try {
+    const data = await apiJson('/api/push/subscriptions');
+    const rows = data.employees || [];
+    select.innerHTML = '<option value="all">All subscribed employees</option>' + rows.map(row => {
+      const count = (row.devices || []).length;
+      const emp = row.employee || {};
+      return `<option value="${emp.id}">${emp.name || emp.login || 'Employee'} (${count} device${count === 1 ? '' : 's'})</option>`;
+    }).join('');
+    const subscribed = rows.filter(row => (row.devices || []).length);
+    if (!subscribed.length) {
+      list.innerHTML = '<div class="stack-empty">No subscribed devices yet. Employees must press Enable Notifications on their phone.</div>';
+      return;
+    }
+    list.innerHTML = subscribed.map(row => `
+      <div class="stack-item">
+        <div><strong>${row.employee.name}</strong> — ${row.devices.length} device${row.devices.length === 1 ? '' : 's'}</div>
+        <div class="small">${row.devices.map(d => d.updatedAt || d.createdAt || '').join('<br>')}</div>
+      </div>
+    `).join('');
+  } catch (err) {
+    list.innerHTML = `<div class="stack-empty">${err.message || 'Could not load devices'}</div>`;
+  }
+}
+async function sendPushNotification() {
+  const status = qs('pushMessageStatus');
+  const payload = {
+    employeeId: qs('pushEmployee').value || 'all',
+    title: qs('pushTitle').value.trim() || 'ClockFlow',
+    message: qs('pushMessage').value.trim(),
+    url: '/mobile.html'
+  };
+  if (!payload.message) {
+    status.style.color = '#ffb0a9';
+    status.textContent = 'Message is required';
+    return;
+  }
+  status.style.color = '#9cc2ff';
+  status.textContent = 'Sending...';
+  try {
+    const data = await apiJson('/api/push/send', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+    });
+    status.style.color = '#8ff0a4';
+    status.textContent = `Sent: ${data.sent}, failed: ${data.failed}`;
+    qs('pushMessage').value = '';
+    await fetchPushSubscriptions();
+  } catch (err) {
+    status.style.color = '#ffb0a9';
+    status.textContent = err.message || 'Send failed';
+  }
+}
+async function sendReminder(type) {
+  const status = qs('pushMessageStatus');
+  status.style.color = '#9cc2ff';
+  status.textContent = 'Sending reminder...';
+  try {
+    const data = await apiJson('/api/push/reminder-test', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type })
+    });
+    status.style.color = '#8ff0a4';
+    status.textContent = `Reminder sent: ${data.sent}, failed: ${data.failed}`;
+  } catch (err) {
+    status.style.color = '#ffb0a9';
+    status.textContent = err.message || 'Reminder failed';
+  }
+}
+
 async function initMap() {
   if (!map) {
     map = L.map('map').setView([51.48, 0.39], 11);
@@ -585,6 +674,7 @@ async function initAdmin() {
   await fetchFailedAttempts(1);
   await fetchDashboard();
   await fetchReport();
+  await fetchPushSubscriptions();
   await initMap();
 }
 
@@ -608,6 +698,10 @@ qs('excelBtn').addEventListener('click', downloadExcel);
 qs('pdfBtn').addEventListener('click', downloadPdf);
 qs('backupBtn').addEventListener('click', downloadBackup);
 qs('refreshMapBtn').addEventListener('click', initMap);
+qs('sendPushBtn').addEventListener('click', sendPushNotification);
+qs('refreshPushBtn').addEventListener('click', fetchPushSubscriptions);
+qs('clockInReminderBtn').addEventListener('click', () => sendReminder('clock-in'));
+qs('clockOutReminderBtn').addEventListener('click', () => sendReminder('clock-out'));
 qs('refreshTimesheetBtn').addEventListener('click', fetchTimesheet);
 qs('logoutBtn').addEventListener('click', logoutAdmin);
 
@@ -616,13 +710,20 @@ function logoutAdmin() {
   localStorage.removeItem('adminUsername');
   sessionStorage.removeItem('adminPassword');
   localStorage.removeItem('adminPassword');
+  sessionStorage.removeItem('adminToken');
+  localStorage.removeItem('adminToken');
   location.reload();
 }
 
 qsa('.admin-nav-btn').forEach(btn => btn.addEventListener('click', () => showAdminView(btn.dataset.view)));
 
 window.addEventListener('DOMContentLoaded', async () => {
-  const saved = getAdminPassword();
+  const mobileToken = getMobileAdminToken();
+  if (mobileToken) {
+    sessionStorage.setItem('adminToken', mobileToken);
+    localStorage.setItem('adminToken', mobileToken);
+  }
+  const saved = getAdminPassword() || getAdminToken();
   if (saved) {
     qs('loginCard').style.display = 'none';
     qs('adminContent').style.display = 'block';
@@ -634,6 +735,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       localStorage.removeItem('adminUsername');
       sessionStorage.removeItem('adminPassword');
       localStorage.removeItem('adminPassword');
+      sessionStorage.removeItem('adminToken');
+      localStorage.removeItem('adminToken');
       qs('loginCard').style.display = 'block';
       qs('adminContent').style.display = 'none';
     }

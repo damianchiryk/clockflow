@@ -27,6 +27,78 @@ function switchTab(tabId) {
   qs(tabId).classList.add('active');
   document.querySelector(`.menu-btn[data-tab="${tabId}"]`).classList.add('active');
 }
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
+}
+function pushSupported() {
+  return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+}
+function setPushStatus(text, tone = 'info') {
+  const el = qs('pushStatus');
+  if (!el) return;
+  el.textContent = text;
+  el.style.color = tone === 'error' ? '#ffb0a9' : tone === 'ok' ? '#8ff0a4' : '';
+}
+async function registerServiceWorker() {
+  if (!pushSupported()) throw new Error('Push notifications are not supported on this device/browser.');
+  return navigator.serviceWorker.register('/service-worker.js');
+}
+async function enablePushNotifications() {
+  if (!auth) return;
+  try {
+    if (!pushSupported()) {
+      setPushStatus('This device/browser does not support push notifications.', 'error');
+      return;
+    }
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      setPushStatus('Notifications permission was not granted.', 'error');
+      return;
+    }
+    setPushStatus('Enabling notifications...', 'info');
+    const registration = await registerServiceWorker();
+    const keyRes = await fetch('/api/push/public-key');
+    const { publicKey } = await keyRes.json();
+    const subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(publicKey)
+    });
+    const res = await fetch('/api/push/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ employeeId: auth.employeeId, pin: auth.pin, subscription })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Unable to save subscription');
+    setPushStatus('Push notifications enabled for this device.', 'ok');
+    setNotice('Push notifications enabled.', 'ok');
+  } catch (err) {
+    setPushStatus(err.message || 'Could not enable notifications.', 'error');
+  }
+}
+async function refreshPushState() {
+  const btn = qs('enablePushBtn');
+  if (!btn) return;
+  if (!pushSupported()) {
+    btn.disabled = true;
+    setPushStatus('Push notifications are not supported on this device/browser.', 'error');
+    return;
+  }
+  try {
+    const reg = await navigator.serviceWorker.getRegistration('/service-worker.js') || await registerServiceWorker();
+    const sub = await reg.pushManager.getSubscription();
+    if (Notification.permission === 'granted' && sub) setPushStatus('Push notifications are enabled for this device.', 'ok');
+    else if (Notification.permission === 'denied') setPushStatus('Notifications are blocked in browser settings.', 'error');
+    else setPushStatus('Push notifications are not enabled yet.', 'info');
+  } catch (err) {
+    setPushStatus('Push setup is not ready yet.', 'error');
+  }
+}
+
 function renderLoggedOut() {
   qs('loginView').style.display = 'block';
   qs('appView').style.display = 'none';
@@ -42,7 +114,7 @@ async function login() {
   });
   const data = await res.json();
   if (!res.ok) return setMessage(data.error || 'Login failed', 'error');
-  auth = { employeeId: data.employee.id, pin, employee: data.employee };
+  auth = { employeeId: data.employee.id, pin, employee: data.employee, adminToken: data.adminToken || null };
   currentState = data.state || { currentlyClockedIn: false };
   saveAuth();
   renderLoggedIn();
@@ -187,20 +259,29 @@ function renderLoggedIn() {
   qs('loginView').style.display = 'none';
   qs('appView').style.display = 'block';
   qs('employeeSummary').textContent = `${auth.employee.name} • ${auth.employee.site} • login: ${auth.employee.login}`;
+  const adminBtn = qs('adminPanelBtn');
+  if (adminBtn) adminBtn.style.display = auth.employee.isAdmin && auth.adminToken ? 'inline-flex' : 'none';
   updateClockButtons();
   switchTab('clockTab');
   fetchMyLogs();
   fetchMyDocuments();
   setTimeout(fetchMyLogs, 500);
+  refreshPushState();
 }
+
 
 document.querySelectorAll('.menu-btn').forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
 qs('loginBtn').addEventListener('click', login);
 qs('logoutBtn').addEventListener('click', logout);
+qs('adminPanelBtn').addEventListener('click', () => {
+  if (!auth?.adminToken) return;
+  window.location.href = '/admin.html?fromMobile=1';
+});
 qs('clockInBtn').addEventListener('click', () => submitClock('in'));
 qs('clockOutBtn').addEventListener('click', () => submitClock('out'));
 qs('uploadBtn').addEventListener('click', uploadDocument);
 qs('refreshMyLogsBtn').addEventListener('click', fetchMyLogs);
+qs('enablePushBtn').addEventListener('click', enablePushNotifications);
 
 loadAuth();
 if (auth?.employeeId && auth?.pin && auth?.employee) renderLoggedIn();

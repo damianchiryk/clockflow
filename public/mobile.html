@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ClockFlow</title>
   <link rel="stylesheet" href="/style.css" />
+  <link rel="manifest" href="/manifest.json" />
 </head>
 <body>
   <div class="page">
@@ -20,7 +21,6 @@
         <input id="pinInput" type="password" inputmode="numeric" placeholder="Enter PIN" autocomplete="current-password" />
         <button class="btn btn-refresh" id="loginBtn" style="margin-top:18px;width:100%;">Login</button>
         <div id="message" class="message"></div>
-        <a class="link" href="/admin.html">Open Admin Panel</a>
       </div>
 
       <div id="appView" style="display:none;">
@@ -29,6 +29,7 @@
             <h1 style="margin-bottom:10px;">Clock In / Out</h1>
             <div id="employeeSummary" class="site-note"></div>
           </div>
+          <button class="btn btn-refresh slim-btn" id="adminPanelBtn" type="button" style="display:none;">Admin Panel</button>
           <button class="btn btn-muted slim-btn" id="logoutBtn" type="button">Logout</button>
         </div>
 
@@ -40,6 +41,11 @@
 
         <div id="clockTab" class="mobile-tab active">
           <div id="siteNote" class="site-note"></div>
+          <div class="panel compact-panel" id="pushPanel" style="margin-bottom:14px;">
+            <h2 style="margin-top:0;">Notifications</h2>
+            <div id="pushStatus" class="site-note">Push notifications are not enabled yet.</div>
+            <button class="btn btn-refresh" id="enablePushBtn" type="button" style="width:100%;margin-top:12px;">Enable Notifications</button>
+          </div>
           <button class="btn btn-in" id="clockInBtn">Clock In</button>
           <button class="btn btn-out" id="clockOutBtn">Clock Out</button>
         </div>
@@ -71,7 +77,6 @@
           </div>
         </div>
 
-        <a class="link" href="/admin.html">Open Admin Panel</a>
       </div>
     </div>
   </div>

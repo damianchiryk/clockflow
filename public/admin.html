@@ -39,6 +39,7 @@
         <button class="btn btn-refresh slim-btn admin-nav-btn" data-view="logs">Logs</button>
         <button class="btn btn-refresh slim-btn admin-nav-btn" data-view="failed">Failed</button>
         <button class="btn btn-refresh slim-btn admin-nav-btn" data-view="payroll">Payroll</button>
+        <button class="btn btn-refresh slim-btn admin-nav-btn" data-view="notifications">Notifications</button>
         <button class="btn btn-refresh slim-btn admin-nav-btn" data-view="map">GPS Map</button>
         <button class="btn btn-refresh slim-btn" id="backupBtn">Backup All</button>
       </div>
@@ -240,6 +241,38 @@
               <thead><tr><th>Name</th><th>Site</th><th>Type</th><th>Rate</th><th>Lunch</th><th>Hours</th><th>Advance</th><th>Total</th></tr></thead>
               <tbody id="reportBody"><tr><td colspan="8">No report yet</td></tr></tbody>
             </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="admin-view" id="view-notifications">
+        <div class="admin-grid top-gap">
+          <div class="panel section-card">
+            <h2>Push Notifications</h2>
+            <div class="site-note">Send push notifications to employees who enabled notifications on their phone/home-screen ClockFlow shortcut.</div>
+            <label>Send to</label>
+            <select id="pushEmployee">
+              <option value="all">All subscribed employees</option>
+            </select>
+            <label>Title</label>
+            <input id="pushTitle" type="text" value="ClockFlow" />
+            <label>Message</label>
+            <textarea id="pushMessage" rows="5" placeholder="Type notification message"></textarea>
+            <div class="button-inline wrap-inline">
+              <button class="btn btn-refresh" id="sendPushBtn" type="button">Send Push</button>
+              <button class="btn btn-muted" id="refreshPushBtn" type="button">Refresh Devices</button>
+            </div>
+            <div class="message" id="pushMessageStatus"></div>
+          </div>
+
+          <div class="panel section-card">
+            <h2>Quick Reminders</h2>
+            <div class="button-inline wrap-inline">
+              <button class="btn btn-refresh" id="clockInReminderBtn" type="button">Clock In Reminder</button>
+              <button class="btn btn-refresh" id="clockOutReminderBtn" type="button">Clock Out Reminder</button>
+            </div>
+            <h2 class="top-gap-small">Subscribed Devices</h2>
+            <div id="pushDevicesList" class="stack-list"><div class="stack-empty">No devices loaded.</div></div>
           </div>
         </div>
       </div>

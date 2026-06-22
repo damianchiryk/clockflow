@@ -5,6 +5,8 @@ const path = require('path');
 const { spawn } = require('child_process');
 const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
+const crypto = require('crypto');
+const webpush = require('web-push');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -18,6 +20,8 @@ const LOGS_FILE = path.join(DATA_DIR, 'logs.json');
 const SITES_FILE = path.join(DATA_DIR, 'sites.json');
 const FAILED_FILE = path.join(DATA_DIR, 'failed_attempts.json');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
+const PUSH_SUBSCRIPTIONS_FILE = path.join(DATA_DIR, 'push_subscriptions.json');
+const VAPID_FILE = path.join(DATA_DIR, 'vapid.json');
 
 app.use(express.json({ limit: '25mb' }));
 app.use(express.static(PUBLIC_DIR));
@@ -113,10 +117,33 @@ function haversineMeters(lat1, lon1, lat2, lon2) {
   const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
   return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
+
+function signAdminEmployeeToken(employeeId) {
+  const payload = Buffer.from(JSON.stringify({ employeeId, iat: Date.now() })).toString('base64url');
+  const sig = crypto.createHmac('sha256', ADMIN_PASSWORD).update(payload).digest('base64url');
+  return `${payload}.${sig}`;
+}
+function verifyAdminEmployeeToken(token) {
+  if (!token || !String(token).includes('.')) return null;
+  const [payload, sig] = String(token).split('.');
+  const expected = crypto.createHmac('sha256', ADMIN_PASSWORD).update(payload).digest('base64url');
+  try {
+    if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return null;
+  } catch { return null; }
+  let data;
+  try { data = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')); } catch { return null; }
+  if (!data.employeeId || !data.iat) return null;
+  if (Date.now() - Number(data.iat) > 1000 * 60 * 60 * 24 * 14) return null;
+  const employee = readJson(EMPLOYEES_FILE, []).find(e => e.id === data.employeeId);
+  return employee && employee.isAdmin ? employee : null;
+}
+
 function adminOnly(req, res, next) {
   const password = req.headers['x-admin-password'] || req.query.adminPassword || req.query.password;
-  if (String(password || '') !== String(ADMIN_PASSWORD)) return res.status(401).json({ error: 'Unauthorized' });
-  next();
+  const token = req.headers['x-admin-token'] || req.query.adminToken;
+  if (String(password || '') === String(ADMIN_PASSWORD)) return next();
+  if (verifyAdminEmployeeToken(token)) return next();
+  return res.status(401).json({ error: 'Unauthorized' });
 }
 function getReportDateRange(query = {}) {
   const { start, end, date } = query;
@@ -288,6 +315,44 @@ function groupLogsByDay(employee, logs, start, end) {
   return days;
 }
 
+
+function getVapidKeys() {
+  const envPublic = process.env.VAPID_PUBLIC_KEY;
+  const envPrivate = process.env.VAPID_PRIVATE_KEY;
+  if (envPublic && envPrivate) return { publicKey: envPublic, privateKey: envPrivate };
+  let stored = readJson(VAPID_FILE, null);
+  if (!stored || !stored.publicKey || !stored.privateKey) {
+    stored = webpush.generateVAPIDKeys();
+    writeJson(VAPID_FILE, stored);
+  }
+  return stored;
+}
+function setupWebPush() {
+  const keys = getVapidKeys();
+  const subject = process.env.VAPID_SUBJECT || 'mailto:admin@clockflow.local';
+  webpush.setVapidDetails(subject, keys.publicKey, keys.privateKey);
+}
+function normalizeSubscriptionRecord(employee, subscription) {
+  return {
+    id: uid(),
+    employeeId: employee.id,
+    employeeName: employee.name,
+    endpoint: subscription.endpoint,
+    subscription,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    userAgent: ''
+  };
+}
+async function sendPushToRecord(record, payload) {
+  try {
+    await webpush.sendNotification(record.subscription, JSON.stringify(payload));
+    return { ok: true, employeeId: record.employeeId, endpoint: record.endpoint };
+  } catch (err) {
+    return { ok: false, employeeId: record.employeeId, endpoint: record.endpoint, statusCode: err.statusCode, error: err.message };
+  }
+}
+
 function ensureSeed() {
   ensureDir(DATA_DIR);
   ensureDir(UPLOADS_DIR);
@@ -300,6 +365,8 @@ function ensureSeed() {
   ensureFile(LOGS_FILE, []);
   ensureFile(FAILED_FILE, []);
   ensureFile(USERS_FILE, []);
+  ensureFile(PUSH_SUBSCRIPTIONS_FILE, []);
+  setupWebPush();
 }
 ensureSeed();
 
@@ -405,7 +472,9 @@ app.post('/api/mobile-login', (req, res) => {
   if (!employee) return res.status(401).json({ error: 'Invalid login or PIN' });
   const logs = readJson(LOGS_FILE, []);
   const state = getEmployeeCurrentState(employee.id, logs);
-  res.json({ success: true, employee: employeeSafe(employee), state });
+  const response = { success: true, employee: employeeSafe(employee), state };
+  if (employee.isAdmin) response.adminToken = signAdminEmployeeToken(employee.id);
+  res.json(response);
 });
 
 app.get('/api/mobile-logs', (req, res) => {
@@ -592,6 +661,82 @@ app.get('/api/employee-timesheet', adminOnly, (req, res) => {
     end: dateLondon(endDate),
     days
   });
+});
+
+
+app.get('/api/push/public-key', (req, res) => {
+  const keys = getVapidKeys();
+  res.json({ publicKey: keys.publicKey });
+});
+
+app.post('/api/push/subscribe', (req, res) => {
+  const { employeeId, pin, subscription } = req.body || {};
+  const employee = authenticateEmployeeById(employeeId, pin);
+  if (!employee) return res.status(401).json({ error: 'Invalid employee or PIN' });
+  if (!subscription || !subscription.endpoint) return res.status(400).json({ error: 'Missing push subscription' });
+  const subscriptions = readJson(PUSH_SUBSCRIPTIONS_FILE, []);
+  const existingIndex = subscriptions.findIndex(s => s.endpoint === subscription.endpoint);
+  const record = normalizeSubscriptionRecord(employee, subscription);
+  record.userAgent = String(req.headers['user-agent'] || '');
+  if (existingIndex >= 0) {
+    subscriptions[existingIndex] = { ...subscriptions[existingIndex], ...record, id: subscriptions[existingIndex].id || record.id, createdAt: subscriptions[existingIndex].createdAt || record.createdAt };
+  } else {
+    subscriptions.push(record);
+  }
+  writeJson(PUSH_SUBSCRIPTIONS_FILE, subscriptions);
+  res.json({ success: true, employee: employeeSafe(employee) });
+});
+
+app.post('/api/push/unsubscribe', (req, res) => {
+  const { employeeId, pin, endpoint } = req.body || {};
+  const employee = authenticateEmployeeById(employeeId, pin);
+  if (!employee) return res.status(401).json({ error: 'Invalid employee or PIN' });
+  const subscriptions = readJson(PUSH_SUBSCRIPTIONS_FILE, []).filter(s => !(s.employeeId === employee.id && (!endpoint || s.endpoint === endpoint)));
+  writeJson(PUSH_SUBSCRIPTIONS_FILE, subscriptions);
+  res.json({ success: true });
+});
+
+app.get('/api/push/subscriptions', adminOnly, (req, res) => {
+  const employees = readJson(EMPLOYEES_FILE, []);
+  const subscriptions = readJson(PUSH_SUBSCRIPTIONS_FILE, []);
+  const byEmployee = employees.map(emp => ({
+    employee: employeeSafe(emp),
+    devices: subscriptions.filter(s => s.employeeId === emp.id).map(s => ({ id: s.id, createdAt: s.createdAt, updatedAt: s.updatedAt, endpoint: s.endpoint }))
+  }));
+  res.json({ employees: byEmployee, totalDevices: subscriptions.length });
+});
+
+app.post('/api/push/send', adminOnly, async (req, res) => {
+  const { employeeId = 'all', title = 'ClockFlow', message = '', url = '/mobile.html' } = req.body || {};
+  if (!String(message || '').trim()) return res.status(400).json({ error: 'Message is required' });
+  const subscriptions = readJson(PUSH_SUBSCRIPTIONS_FILE, []);
+  let targets = subscriptions;
+  if (employeeId && employeeId !== 'all') targets = subscriptions.filter(s => s.employeeId === employeeId);
+  if (!targets.length) return res.status(404).json({ error: 'No subscribed devices found' });
+  const payload = {
+    title: String(title || 'ClockFlow'),
+    body: String(message),
+    url: String(url || '/mobile.html'),
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+    timestamp: Date.now()
+  };
+  const results = await Promise.all(targets.map(t => sendPushToRecord(t, payload)));
+  const expiredEndpoints = results.filter(r => !r.ok && [404, 410].includes(Number(r.statusCode))).map(r => r.endpoint);
+  if (expiredEndpoints.length) {
+    const remaining = subscriptions.filter(s => !expiredEndpoints.includes(s.endpoint));
+    writeJson(PUSH_SUBSCRIPTIONS_FILE, remaining);
+  }
+  res.json({ success: true, sent: results.filter(r => r.ok).length, failed: results.filter(r => !r.ok).length, results });
+});
+
+app.post('/api/push/reminder-test', adminOnly, async (req, res) => {
+  const { type = 'clock-in' } = req.body || {};
+  const message = type === 'clock-out' ? 'Reminder: please clock out before leaving site.' : 'Reminder: please clock in when you arrive on site.';
+  const subscriptions = readJson(PUSH_SUBSCRIPTIONS_FILE, []);
+  const payload = { title: 'ClockFlow Reminder', body: message, url: '/mobile.html', timestamp: Date.now() };
+  const results = await Promise.all(subscriptions.map(t => sendPushToRecord(t, payload)));
+  res.json({ success: true, sent: results.filter(r => r.ok).length, failed: results.filter(r => !r.ok).length });
 });
 
 app.get('/api/reports/weekly', adminOnly, (req, res) => {
