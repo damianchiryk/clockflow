@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ClockFlow Admin</title>
-  <link rel="stylesheet" href="/style.css?v=20260411final2" />
+  <link rel="stylesheet" href="/style.css?v=20260622payroll" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
@@ -12,8 +12,10 @@
     <div class="card admin-card" id="loginCard">
       <div class="eyebrow">CLOCKFLOW</div>
       <h1>Admin Login</h1>
+      <label for="adminUsername">Login</label>
+      <input id="adminUsername" type="text" placeholder="Admin login" autocomplete="username" value="admin" />
       <label for="adminPassword">Password</label>
-      <input id="adminPassword" type="password" placeholder="Enter admin password" />
+      <input id="adminPassword" type="password" placeholder="Enter admin password" autocomplete="current-password" />
       <button class="btn btn-refresh" id="loginBtn" style="margin-top:18px;width:100%;">Login</button>
       <div class="message" id="loginMessage"></div>
       <a class="link" href="/mobile.html">Back to Mobile</a>
@@ -223,9 +225,11 @@
       <div class="admin-view" id="view-payroll">
         <div class="panel section-card top-gap" id="reportSection">
           <div class="admin-header">
-            <h2 style="margin:0;">Weekly Payroll (Mon-Sun)</h2>
-            <div class="button-inline">
+            <h2 style="margin:0;">Payroll</h2>
+            <div class="button-inline wrap-inline">
               <select id="reportSiteFilter" style="max-width:220px;"><option value="">All sites</option></select>
+              <input id="reportStart" type="date" />
+              <input id="reportEnd" type="date" />
               <button class="btn btn-refresh slim-btn" id="refreshReportBtn">Refresh</button>
               <button class="btn btn-refresh slim-btn" id="excelBtn">Excel</button>
               <button class="btn btn-refresh slim-btn" id="pdfBtn">PDF</button>
@@ -254,6 +258,6 @@
     </div>
   </div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="/admin.js?v=20260411final2"></script>
+  <script src="/admin.js?v=20260622payroll"></script>
 </body>
 </html>

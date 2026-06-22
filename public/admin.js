@@ -9,6 +9,9 @@ let timesheetData = null;
 function getAdminPassword() {
   return sessionStorage.getItem('adminPassword') || localStorage.getItem('adminPassword') || '';
 }
+function getAdminUsername() {
+  return sessionStorage.getItem('adminUsername') || localStorage.getItem('adminUsername') || 'admin';
+}
 function adminHeaders(extra = {}) {
   return { ...extra, 'x-admin-password': getAdminPassword() };
 }
@@ -119,12 +122,13 @@ function setAdminMessage(text, ok = true) {
 }
 
 async function login() {
+  const username = (qs('adminUsername')?.value || 'admin').trim();
   const password = qs('adminPassword').value.trim();
   const msg = qs('loginMessage');
   const res = await fetch('/api/admin-login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ password })
+    body: JSON.stringify({ username, password })
   });
   const data = await res.json();
   if (!res.ok) {
@@ -132,6 +136,8 @@ async function login() {
     msg.textContent = data.error || 'Login failed';
     return;
   }
+  sessionStorage.setItem('adminUsername', username);
+  localStorage.setItem('adminUsername', username);
   sessionStorage.setItem('adminPassword', password);
   localStorage.setItem('adminPassword', password);
   qs('loginCard').style.display = 'none';
@@ -470,9 +476,34 @@ async function fetchDashboard() {
   `).join('') : '<tr><td colspan="6">No data</td></tr>';
 }
 
-async function fetchReport() {
+function reportQueryString() {
+  const params = new URLSearchParams();
   const site = qs('reportSiteFilter').value;
-  const url = site ? `/api/reports/weekly?site=${encodeURIComponent(site)}` : '/api/reports/weekly';
+  const start = qs('reportStart')?.value;
+  const end = qs('reportEnd')?.value;
+  if (site) params.set('site', site);
+  if (start) params.set('start', start);
+  if (end) params.set('end', end);
+  const query = params.toString();
+  return query ? `?${query}` : '';
+}
+function setDefaultReportDates() {
+  const startEl = qs('reportStart');
+  const endEl = qs('reportEnd');
+  if (!startEl || !endEl || startEl.value || endEl.value) return;
+  const now = new Date();
+  const day = now.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() + diff);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  startEl.value = dateForInput(monday);
+  endEl.value = dateForInput(sunday);
+}
+async function fetchReport() {
+  setDefaultReportDates();
+  const url = `/api/reports/weekly${reportQueryString()}`;
   const data = await apiJson(url);
   const report = data.report || [];
   const body = qs('reportBody');
@@ -491,15 +522,15 @@ async function fetchReport() {
 }
 
 function downloadExcel() {
-  const site = qs('reportSiteFilter').value;
-  const qs1 = site ? `?site=${encodeURIComponent(site)}` : '';
+  setDefaultReportDates();
+  const qs1 = reportQueryString();
   const password = encodeURIComponent(getAdminPassword());
   window.open(`/api/reports/weekly/excel${qs1}${qs1 ? '&' : '?'}adminPassword=${password}`, '_blank');
 }
 
 function downloadPdf() {
-  const site = qs('reportSiteFilter').value;
-  const qs1 = site ? `?site=${encodeURIComponent(site)}` : '';
+  setDefaultReportDates();
+  const qs1 = reportQueryString();
   const password = encodeURIComponent(getAdminPassword());
   window.open(`/api/reports/weekly/pdf${qs1}${qs1 ? '&' : '?'}adminPassword=${password}`, '_blank');
 }
@@ -558,6 +589,8 @@ async function initAdmin() {
 }
 
 qs('loginBtn').addEventListener('click', login);
+qs('adminPassword').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+qs('adminUsername').addEventListener('keydown', e => { if (e.key === 'Enter') qs('adminPassword').focus(); });
 qs('saveEmployeeBtn').addEventListener('click', saveEmployee);
 qs('cancelEmployeeBtn').addEventListener('click', clearEmployeeForm);
 qs('refreshEmployeesBtn').addEventListener('click', fetchEmployees);
@@ -579,6 +612,8 @@ qs('refreshTimesheetBtn').addEventListener('click', fetchTimesheet);
 qs('logoutBtn').addEventListener('click', logoutAdmin);
 
 function logoutAdmin() {
+  sessionStorage.removeItem('adminUsername');
+  localStorage.removeItem('adminUsername');
   sessionStorage.removeItem('adminPassword');
   localStorage.removeItem('adminPassword');
   location.reload();
@@ -595,6 +630,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       await initAdmin();
       showAdminView(localStorage.getItem('clockflowAdminView') || 'today');
     } catch {
+      sessionStorage.removeItem('adminUsername');
+      localStorage.removeItem('adminUsername');
       sessionStorage.removeItem('adminPassword');
       localStorage.removeItem('adminPassword');
       qs('loginCard').style.display = 'block';

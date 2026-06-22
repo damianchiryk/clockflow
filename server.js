@@ -8,6 +8,7 @@ const PDFDocument = require('pdfkit');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 const PUBLIC_DIR = path.join(__dirname, 'public');
@@ -116,6 +117,25 @@ function adminOnly(req, res, next) {
   const password = req.headers['x-admin-password'] || req.query.adminPassword || req.query.password;
   if (String(password || '') !== String(ADMIN_PASSWORD)) return res.status(401).json({ error: 'Unauthorized' });
   next();
+}
+function getReportDateRange(query = {}) {
+  const { start, end, date } = query;
+  if (start && end) {
+    const startDate = new Date(`${start}T00:00:00`);
+    const endDate = new Date(`${end}T23:59:59.999`);
+    if (!Number.isNaN(startDate.getTime()) && !Number.isNaN(endDate.getTime()) && startDate <= endDate) {
+      return { startDate, endDate, label: `${dateLondon(startDate)} to ${dateLondon(endDate)}` };
+    }
+  }
+  if (date) {
+    const picked = new Date(`${date}T12:00:00`);
+    if (!Number.isNaN(picked.getTime())) {
+      const range = weekRangeMondayToSunday(picked);
+      return { startDate: range.monday, endDate: range.sunday, label: `${dateLondon(range.monday)} to ${dateLondon(range.sunday)}` };
+    }
+  }
+  const range = weekRangeMondayToSunday(new Date());
+  return { startDate: range.monday, endDate: range.sunday, label: `${dateLondon(range.monday)} to ${dateLondon(range.sunday)}` };
 }
 function employeeSafe(employee) {
   if (!employee) return null;
@@ -288,8 +308,11 @@ app.get('/admin', (req, res) => res.redirect('/admin.html'));
 app.get('/health', (req, res) => res.status(200).send('OK'));
 
 app.post('/api/admin-login', (req, res) => {
-  const { password } = req.body || {};
-  if (String(password || '') !== String(ADMIN_PASSWORD)) return res.status(401).json({ error: 'Invalid admin password' });
+  const { username, password } = req.body || {};
+  const suppliedUsername = String(username || ADMIN_USERNAME).trim();
+  const validUsername = suppliedUsername.toLowerCase() === String(ADMIN_USERNAME).trim().toLowerCase();
+  const validPassword = String(password || '') === String(ADMIN_PASSWORD);
+  if (!validUsername || !validPassword) return res.status(401).json({ error: 'Invalid admin login or password' });
   res.json({ success: true });
 });
 
@@ -574,15 +597,15 @@ app.get('/api/employee-timesheet', adminOnly, (req, res) => {
 app.get('/api/reports/weekly', adminOnly, (req, res) => {
   const employees = readJson(EMPLOYEES_FILE, []);
   const logs = readJson(LOGS_FILE, []);
-  const { monday, sunday } = weekRangeMondayToSunday(new Date());
-  let report = employees.map(emp => compensationSummaryForEmployee(emp, logs, monday, sunday));
+  const { startDate, endDate } = getReportDateRange(req.query);
+  let report = employees.map(emp => compensationSummaryForEmployee(emp, logs, startDate, endDate));
   if (req.query.site) report = report.filter(r => r.site === req.query.site);
-  res.json({ weekStart: monday.toISOString(), weekEnd: sunday.toISOString(), report });
+  res.json({ weekStart: startDate.toISOString(), weekEnd: endDate.toISOString(), report });
 });
 app.get('/api/reports/weekly/excel', adminOnly, async (req, res) => {
   const employees = readJson(EMPLOYEES_FILE, []);
   const logs = readJson(LOGS_FILE, []);
-  const { monday, sunday } = weekRangeMondayToSunday(new Date());
+  const { startDate, endDate } = getReportDateRange(req.query);
   const siteFilter = req.query.site || '';
   const workbook = new ExcelJS.Workbook();
   const ws = workbook.addWorksheet('Payroll');
@@ -598,27 +621,27 @@ app.get('/api/reports/weekly/excel', adminOnly, async (req, res) => {
   ];
   employees.forEach(emp => {
     if (siteFilter && emp.site !== siteFilter) return;
-    dailyRowsForEmployee(emp, logs, monday, sunday).forEach(r => ws.addRow(r));
+    dailyRowsForEmployee(emp, logs, startDate, endDate).forEach(r => ws.addRow(r));
   });
   ws.getRow(1).font = { bold: true };
   res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-  res.setHeader('Content-Disposition', `attachment; filename="payroll-${siteFilter || 'all-sites'}-${dateLondon(new Date())}.xlsx"`);
+  res.setHeader('Content-Disposition', `attachment; filename="payroll-${siteFilter || 'all-sites'}-${dateLondon(startDate)}-to-${dateLondon(endDate)}.xlsx"`);
   await workbook.xlsx.write(res);
   res.end();
 });
 app.get('/api/reports/weekly/pdf', adminOnly, (req, res) => {
   const employees = readJson(EMPLOYEES_FILE, []);
   const logs = readJson(LOGS_FILE, []);
-  const { monday, sunday } = weekRangeMondayToSunday(new Date());
+  const { startDate, endDate } = getReportDateRange(req.query);
   const siteFilter = req.query.site || '';
-  const report = employees.filter(emp => !siteFilter || emp.site === siteFilter).map(emp => compensationSummaryForEmployee(emp, logs, monday, sunday));
+  const report = employees.filter(emp => !siteFilter || emp.site === siteFilter).map(emp => compensationSummaryForEmployee(emp, logs, startDate, endDate));
   const doc = new PDFDocument({ margin: 40, size: 'A4' });
-  const filename = `payroll-${siteFilter || 'all-sites'}-${dateLondon(new Date())}.pdf`;
+  const filename = `payroll-${siteFilter || 'all-sites'}-${dateLondon(startDate)}-to-${dateLondon(endDate)}.pdf`;
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
   doc.pipe(res);
   doc.fontSize(18).text('ClockFlow Weekly Payroll', { align: 'center' });
-  doc.moveDown(0.5).fontSize(11).text(`Site: ${siteFilter || 'All sites'}`).text(`Week: ${dateLondon(monday)} to ${dateLondon(sunday)}`);
+  doc.moveDown(0.5).fontSize(11).text(`Site: ${siteFilter || 'All sites'}`).text(`Date range: ${dateLondon(startDate)} to ${dateLondon(endDate)}`);
   doc.moveDown();
   report.forEach(row => {
     doc.fontSize(12).text(`${row.name} — ${row.site}`, { underline: true });
