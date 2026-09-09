@@ -63,6 +63,7 @@
             <h2>Book Holiday</h2>
             <div class="site-note">Only working days are deducted. Saturdays, Sundays and England & Wales Bank Holidays are excluded. Requests with less than 10 calendar days' notice require manager approval and are marked as late requests.</div>
             <label>First day of holiday</label><input id="holidayStart" type="date" />
+            <label>Holiday duration</label><select id="holidayDuration"><option value="full">Full Day</option><option value="half">Half Day (0.5 day)</option></select>
             <label>Last day of holiday</label><input id="holidayEnd" type="date" />
             <label>Note (optional)</label><input id="holidayNote" type="text" placeholder="Optional note for manager" />
             <div id="holidayPreview" class="site-note"></div>
@@ -109,6 +110,6 @@
       </div>
     </div>
   </div>
-  <script src="/mobile.js?v=20260909holidays"></script>
+  <script src="/mobile.js?v=20260909halfday"></script>
 </body>
 </html>

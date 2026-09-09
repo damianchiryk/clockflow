@@ -604,14 +604,15 @@ async function fetchHolidaysAdmin(showPopup = false) {
   }
 }
 async function addManualHoliday() {
-  const payload = { employeeId: qs('holidayManualEmployee').value, startDate: qs('holidayManualStart').value, endDate: qs('holidayManualEnd').value, note: qs('holidayManualNote').value.trim() };
+  const payload = { employeeId: qs('holidayManualEmployee').value, startDate: qs('holidayManualStart').value, endDate: qs('holidayManualEnd').value, durationType: qs('holidayManualDuration').value, note: qs('holidayManualNote').value.trim() };
   const msg = qs('holidayManualMessage');
   if (!payload.employeeId || !payload.startDate || !payload.endDate) { msg.style.color = '#ffb0a9'; msg.textContent = 'Select employee and dates.'; return; }
+  if (payload.durationType === 'half' && payload.startDate !== payload.endDate) { msg.style.color = '#ffb0a9'; msg.textContent = 'Half Day must use the same first and last date.'; return; }
   msg.style.color = '#9cc2ff'; msg.textContent = 'Adding holiday...';
   try {
     const data = await apiJson('/api/admin/holidays/manual', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     msg.style.color = '#8ff0a4'; msg.textContent = `Added ${data.holiday.workingDays} working day(s).`;
-    qs('holidayManualStart').value = ''; qs('holidayManualEnd').value = ''; qs('holidayManualNote').value = '';
+    qs('holidayManualStart').value = ''; qs('holidayManualEnd').value = ''; qs('holidayManualDuration').value = 'full'; qs('holidayManualNote').value = '';
     await fetchHolidaysAdmin();
   } catch (err) { msg.style.color = '#ffb0a9'; msg.textContent = err.message || 'Could not add holiday'; }
 }

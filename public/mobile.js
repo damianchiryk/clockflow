@@ -288,16 +288,17 @@ function previewHolidayRequest() {
 }
 async function bookHoliday() {
   if (!auth) return;
-  const payload = { employeeId: auth.employeeId, pin: auth.pin, startDate: qs('holidayStart').value, endDate: qs('holidayEnd').value, note: qs('holidayNote').value.trim() };
+  const payload = { employeeId: auth.employeeId, pin: auth.pin, startDate: qs('holidayStart').value, endDate: qs('holidayEnd').value, durationType: qs('holidayDuration').value, note: qs('holidayNote').value.trim() };
   const msg = qs('holidayMessage');
   if (!payload.startDate || !payload.endDate) { msg.style.color = '#ffb0a9'; msg.textContent = 'Select the holiday dates.'; return; }
+  if (payload.durationType === 'half' && payload.startDate !== payload.endDate) { msg.style.color = '#ffb0a9'; msg.textContent = 'Half Day must use the same first and last date.'; return; }
   msg.style.color = '#9cc2ff'; msg.textContent = 'Sending request...';
   const res = await fetch('/api/holidays/request', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
   const data = await res.json();
   msg.style.color = res.ok ? '#8ff0a4' : '#ffb0a9';
   msg.textContent = res.ok ? `Holiday request sent: ${data.holiday.workingDays} working day(s).` : (data.error || 'Could not request holiday');
   if (res.ok) {
-    qs('holidayStart').value = ''; qs('holidayEnd').value = ''; qs('holidayNote').value = ''; qs('holidayPreview').textContent = '';
+    qs('holidayStart').value = ''; qs('holidayEnd').value = ''; qs('holidayDuration').value = 'full'; qs('holidayNote').value = ''; qs('holidayPreview').textContent = '';
     await fetchMyHolidays();
   }
 }
@@ -360,6 +361,7 @@ qs('refreshHolidaysBtn').addEventListener('click', fetchMyHolidays);
 qs('bookHolidayBtn').addEventListener('click', bookHoliday);
 qs('holidayStart').addEventListener('change', previewHolidayRequest);
 qs('holidayEnd').addEventListener('change', previewHolidayRequest);
+qs('holidayDuration').addEventListener('change', previewHolidayRequest);
 qs('enablePushBtn').addEventListener('click', enablePushNotifications);
 
 loadAuth();

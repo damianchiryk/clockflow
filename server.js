@@ -241,6 +241,7 @@ function holidayDaysInYear(holiday, year) {
   const start = holiday.startDate > `${year}-01-01` ? holiday.startDate : `${year}-01-01`;
   const end = holiday.endDate < `${year}-12-31` ? holiday.endDate : `${year}-12-31`;
   if (start > end) return 0;
+  if (holiday.durationType === 'half' && holiday.startDate === holiday.endDate && holiday.startDate >= `${year}-01-01` && holiday.startDate <= `${year}-12-31`) return 0.5;
   return workingDaysBetween(start, end);
 }
 function holidayBalance(employee, year = Number(dateLondon(new Date()).slice(0, 4))) {
@@ -250,6 +251,7 @@ function holidayBalance(employee, year = Number(dateLondon(new Date()).slice(0, 
   const pending = holidays.filter(h => h.status === 'pending').reduce((sum, h) => {
     const start = h.startDate > `${year}-01-01` ? h.startDate : `${year}-01-01`;
     const end = h.endDate < `${year}-12-31` ? h.endDate : `${year}-12-31`;
+    if (h.durationType === 'half' && h.startDate === h.endDate && h.startDate >= `${year}-01-01` && h.startDate <= `${year}-12-31`) return sum + 0.5;
     return sum + (start <= end ? workingDaysBetween(start, end) : 0);
   }, 0);
   return { year, entitlement, approved: Number(approved.toFixed(2)), pending: Number(pending.toFixed(2)), remaining: Number(Math.max(0, entitlement - approved).toFixed(2)) };
@@ -557,13 +559,32 @@ async function sendPushToRecord(record, payload) {
   }
 }
 
+
+function migrateVrs2BodyshopName() {
+  const sites = readJson(SITES_FILE, []);
+  let sitesChanged = false;
+  sites.forEach(site => {
+    if (site.id === 'alk-grays' || site.name === 'ALK Bodyshop') {
+      if (site.name !== 'VRS 2 Bodyshop') { site.name = 'VRS 2 Bodyshop'; sitesChanged = true; }
+    }
+  });
+  if (sitesChanged) writeJson(SITES_FILE, sites);
+
+  const employees = readJson(EMPLOYEES_FILE, []);
+  let employeesChanged = false;
+  employees.forEach(employee => {
+    if (employee.site === 'ALK Bodyshop') { employee.site = 'VRS 2 Bodyshop'; employeesChanged = true; }
+  });
+  if (employeesChanged) writeJson(EMPLOYEES_FILE, employees);
+}
+
 function ensureSeed() {
   ensureDir(DATA_DIR);
   ensureDir(UPLOADS_DIR);
   ensureFile(SITES_FILE, [
     { id: 'vrs-mechanical', name: 'VRS Mechanical', address: '91a, Thames Industrial Park, East Tilbury, Tilbury RM18 8RH', lat: 51.47873004008197, lng: 0.4137913929600394, radiusMeters: 200 },
     { id: 'vrs-east-tilbury', name: 'VRS Bodyshop', address: '91a, Thames Industrial Park, East Tilbury, Tilbury RM18 8RH', lat: 51.47873004008197, lng: 0.4137913929600394, radiusMeters: 200 },
-    { id: 'alk-grays', name: 'ALK Bodyshop', address: 'Unit 7, Cliffside Estate, Grays RM17 5XR', lat: 51.4838239, lng: 0.3094763, radiusMeters: 200 }
+    { id: 'alk-grays', name: 'VRS 2 Bodyshop', address: 'Unit 7, Cliffside Estate, Grays RM17 5XR', lat: 51.4838239, lng: 0.3094763, radiusMeters: 200 }
   ]);
   ensureFile(EMPLOYEES_FILE, []);
   ensureFile(LOGS_FILE, []);
@@ -575,6 +596,7 @@ function ensureSeed() {
   ensureFile(BANK_HOLIDAYS_FILE, []);
   setupWebPush();
   migrateSiteRadii();
+  migrateVrs2BodyshopName();
   refreshBankHolidaysFromGov();
 }
 ensureSeed();
@@ -749,7 +771,7 @@ app.get('/api/holidays/mine', (req, res) => {
 });
 
 app.post('/api/holidays/request', async (req, res) => {
-  const { employeeId, pin, startDate, endDate, note = '' } = req.body || {};
+  const { employeeId, pin, startDate, endDate, note = '', durationType = 'full' } = req.body || {};
   const employee = authenticateEmployeeById(employeeId, pin);
   if (!employee) return res.status(401).json({ error: 'Unauthorized' });
   const start = ymdToUtcDate(startDate);
@@ -757,8 +779,11 @@ app.post('/api/holidays/request', async (req, res) => {
   const today = dateLondon(new Date());
   if (!start || !end || start > end) return res.status(400).json({ error: 'Invalid holiday dates' });
   if (startDate < today) return res.status(400).json({ error: 'Employees cannot request holiday in the past. Please speak to a manager.' });
-  const workingDays = workingDaysBetween(startDate, endDate);
-  if (workingDays <= 0) return res.status(400).json({ error: 'The selected period contains no working days.' });
+  const calculatedWorkingDays = workingDaysBetween(startDate, endDate);
+  if (calculatedWorkingDays <= 0) return res.status(400).json({ error: 'The selected period contains no working days.' });
+  if (!['full', 'half'].includes(durationType)) return res.status(400).json({ error: 'Invalid holiday duration.' });
+  if (durationType === 'half' && startDate !== endDate) return res.status(400).json({ error: 'Half Day can only be booked for a single date.' });
+  const workingDays = durationType === 'half' ? 0.5 : calculatedWorkingDays;
   const holidays = readJson(HOLIDAYS_FILE, []);
   const overlap = holidays.some(h => h.employeeId === employee.id && h.status !== 'rejected' && startDate <= h.endDate && endDate >= h.startDate);
   if (overlap) return res.status(400).json({ error: 'This request overlaps an existing holiday request.' });
@@ -768,7 +793,7 @@ app.post('/api/holidays/request', async (req, res) => {
   const noticeDays = daysUntilDate(startDate);
   const item = {
     id: uid(), employeeId: employee.id, name: employee.name, site: employee.site,
-    startDate, endDate, workingDays, status: 'pending', lateRequest: noticeDays < 10,
+    startDate, endDate, workingDays, durationType, status: 'pending', lateRequest: noticeDays < 10,
     noticeDays, requestedAt: new Date().toISOString(), requestedBy: 'employee', note: sanitizeText(note),
     decisionAt: null, decisionBy: null, decisionNote: ''
   };
@@ -803,18 +828,21 @@ app.get('/api/admin/holidays', adminOnly, (req, res) => {
 });
 
 app.post('/api/admin/holidays/manual', adminOnly, (req, res) => {
-  const { employeeId, startDate, endDate, note = '' } = req.body || {};
+  const { employeeId, startDate, endDate, note = '', durationType = 'full' } = req.body || {};
   const employees = readJson(EMPLOYEES_FILE, []);
   const employee = employees.find(e => e.id === employeeId);
   if (!employee) return res.status(404).json({ error: 'Employee not found' });
   const start = ymdToUtcDate(startDate), end = ymdToUtcDate(endDate);
   if (!start || !end || start > end) return res.status(400).json({ error: 'Invalid holiday dates' });
-  const workingDays = workingDaysBetween(startDate, endDate);
-  if (workingDays <= 0) return res.status(400).json({ error: 'The selected period contains no working days.' });
+  const calculatedWorkingDays = workingDaysBetween(startDate, endDate);
+  if (calculatedWorkingDays <= 0) return res.status(400).json({ error: 'The selected period contains no working days.' });
+  if (!['full', 'half'].includes(durationType)) return res.status(400).json({ error: 'Invalid holiday duration.' });
+  if (durationType === 'half' && startDate !== endDate) return res.status(400).json({ error: 'Half Day can only be added for a single date.' });
+  const workingDays = durationType === 'half' ? 0.5 : calculatedWorkingDays;
   const holidays = readJson(HOLIDAYS_FILE, []);
   const item = {
     id: uid(), employeeId: employee.id, name: employee.name, site: employee.site,
-    startDate, endDate, workingDays, status: 'approved', lateRequest: false, noticeDays: null,
+    startDate, endDate, workingDays, durationType, status: 'approved', lateRequest: false, noticeDays: null,
     requestedAt: new Date().toISOString(), requestedBy: 'manager', manual: true,
     note: sanitizeText(note), decisionAt: new Date().toISOString(), decisionBy: 'manager', decisionNote: 'Added manually by manager'
   };
