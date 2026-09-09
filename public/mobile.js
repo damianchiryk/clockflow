@@ -119,6 +119,18 @@ async function login() {
   saveAuth();
   renderLoggedIn();
   setNotice(`${data.employee.name} logged in successfully.`, 'ok');
+  if (Array.isArray(data.notifications) && data.notifications.length) {
+    for (const n of data.notifications) {
+      alert(n.message);
+      fetch(`/api/notifications/${n.id}/read`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ employeeId: auth.employeeId, pin: auth.pin }) }).catch(() => {});
+    }
+  }
+  if (data.employee.isAdmin && Array.isArray(data.pendingHolidayRequests) && data.pendingHolidayRequests.length) {
+    const lines = data.pendingHolidayRequests.slice(0, 10).map(h => `${h.name}: ${h.startDate} to ${h.endDate} (${h.workingDays} working day${h.workingDays === 1 ? '' : 's'})${h.lateRequest ? ' - LATE REQUEST' : ''}`);
+    alert(`Holiday requests waiting for approval:
+
+${lines.join('\n')}${data.pendingHolidayRequests.length > 10 ? `\n+ ${data.pendingHolidayRequests.length - 10} more` : ''}`);
+  }
 }
 function logout() {
   auth = null;
@@ -228,6 +240,68 @@ async function submitClock(action) {
     setNotice(msg, 'error');
   }
 }
+
+function renderHolidayBalance(balance) {
+  if (!balance) return;
+  qs('holidayEntitlement').textContent = Number(balance.entitlement || 20).toFixed(Number(balance.entitlement) % 1 ? 1 : 0);
+  qs('holidayApproved').textContent = Number(balance.approved || 0).toFixed(Number(balance.approved) % 1 ? 1 : 0);
+  qs('holidayPending').textContent = Number(balance.pending || 0).toFixed(Number(balance.pending) % 1 ? 1 : 0);
+  qs('holidayRemaining').textContent = Number(balance.remaining || 0).toFixed(Number(balance.remaining) % 1 ? 1 : 0);
+}
+function holidayStatusLabel(h) {
+  if (h.status === 'approved') return 'APPROVED';
+  if (h.status === 'rejected') return 'REJECTED';
+  return h.lateRequest ? 'PENDING - LATE REQUEST' : 'PENDING APPROVAL';
+}
+function renderMyHolidays(data) {
+  renderHolidayBalance(data.balance);
+  const list = qs('myHolidaysList');
+  const holidays = data.holidays || [];
+  list.innerHTML = holidays.length ? holidays.map(h => `
+    <div class="stack-item">
+      <div><strong>${h.startDate} → ${h.endDate}</strong></div>
+      <div>${h.workingDays} working day${h.workingDays === 1 ? '' : 's'} • ${holidayStatusLabel(h)}</div>
+      <div class="small">${h.lateRequest ? `Less than 10 days notice • ` : ''}${h.note || ''}</div>
+    </div>
+  `).join('') : '<div class="stack-empty">No holiday requests yet.</div>';
+  const bank = qs('bankHolidaysList');
+  bank.innerHTML = (data.bankHolidays || []).length ? data.bankHolidays.map(b => `<div class="stack-item"><strong>${b.date}</strong> — ${b.title}</div>`).join('') : '<div class="stack-empty">No bank holidays loaded.</div>';
+}
+async function fetchMyHolidays() {
+  if (!auth) return;
+  const params = new URLSearchParams({ employeeId: auth.employeeId, pin: auth.pin });
+  const res = await fetch(`/api/holidays/mine?${params}`);
+  const data = await res.json();
+  if (res.ok) renderMyHolidays(data);
+}
+function previewHolidayRequest() {
+  const start = qs('holidayStart')?.value;
+  const end = qs('holidayEnd')?.value;
+  const out = qs('holidayPreview');
+  if (!start || !end || !out) return out && (out.textContent = '');
+  if (end < start) return out.textContent = 'Last day cannot be before first day.';
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const first = new Date(`${start}T00:00:00`);
+  const notice = Math.round((first - today) / 86400000);
+  out.textContent = notice < 10 ? `This is a late request (${notice} day${notice === 1 ? '' : 's'} notice) and requires manager approval.` : `${notice} days notice. Request will be sent to a manager for approval.`;
+}
+async function bookHoliday() {
+  if (!auth) return;
+  const payload = { employeeId: auth.employeeId, pin: auth.pin, startDate: qs('holidayStart').value, endDate: qs('holidayEnd').value, note: qs('holidayNote').value.trim() };
+  const msg = qs('holidayMessage');
+  if (!payload.startDate || !payload.endDate) { msg.style.color = '#ffb0a9'; msg.textContent = 'Select the holiday dates.'; return; }
+  msg.style.color = '#9cc2ff'; msg.textContent = 'Sending request...';
+  const res = await fetch('/api/holidays/request', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+  const data = await res.json();
+  msg.style.color = res.ok ? '#8ff0a4' : '#ffb0a9';
+  msg.textContent = res.ok ? `Holiday request sent: ${data.holiday.workingDays} working day(s).` : (data.error || 'Could not request holiday');
+  if (res.ok) {
+    qs('holidayStart').value = ''; qs('holidayEnd').value = ''; qs('holidayNote').value = ''; qs('holidayPreview').textContent = '';
+    await fetchMyHolidays();
+  }
+}
+
 async function uploadDocument() {
   if (!auth) return;
   const file = qs('docFile').files[0];
@@ -265,6 +339,7 @@ function renderLoggedIn() {
   switchTab('clockTab');
   fetchMyLogs();
   fetchMyDocuments();
+  fetchMyHolidays();
   setTimeout(fetchMyLogs, 500);
   refreshPushState();
 }
@@ -281,6 +356,10 @@ qs('clockInBtn').addEventListener('click', () => submitClock('in'));
 qs('clockOutBtn').addEventListener('click', () => submitClock('out'));
 qs('uploadBtn').addEventListener('click', uploadDocument);
 qs('refreshMyLogsBtn').addEventListener('click', fetchMyLogs);
+qs('refreshHolidaysBtn').addEventListener('click', fetchMyHolidays);
+qs('bookHolidayBtn').addEventListener('click', bookHoliday);
+qs('holidayStart').addEventListener('change', previewHolidayRequest);
+qs('holidayEnd').addEventListener('change', previewHolidayRequest);
 qs('enablePushBtn').addEventListener('click', enablePushNotifications);
 
 loadAuth();

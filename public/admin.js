@@ -5,6 +5,7 @@ let map;
 let logsPage = 1;
 let failedPage = 1;
 let timesheetData = null;
+let holidaysAdminData = null;
 
 function getAdminPassword() {
   return sessionStorage.getItem('adminPassword') || localStorage.getItem('adminPassword') || '';
@@ -93,6 +94,7 @@ function showAdminView(view) {
   if (view === 'map' && map) setTimeout(() => map.invalidateSize(), 120);
   if (view === 'timesheet') fetchEmployees();
   if (view === 'notifications') fetchPushSubscriptions();
+  if (view === 'holidays') fetchHolidaysAdmin();
 }
 
 function defaultWeekRange() {
@@ -112,6 +114,7 @@ function clearEmployeeForm() {
     if (qs(id)) qs(id).value = '';
   });
   qs('empCompType').value = 'hourly';
+  if (qs('empHolidayEntitlement')) qs('empHolidayEntitlement').value = '20';
   qs('empGeoRequired').checked = true;
   qs('empIsAdmin').checked = false;
   qs('empMustClock').checked = true;
@@ -179,6 +182,7 @@ async function fetchEmployees() {
   const body = qs('employeesBody');
   const manualCurrent = qs('manualEmployee')?.value || '';
   qs('manualEmployee').innerHTML = employees.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
+  if (qs('holidayManualEmployee')) qs('holidayManualEmployee').innerHTML = employees.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
   if (manualCurrent && employees.some(e => e.id === manualCurrent)) qs('manualEmployee').value = manualCurrent;
 
   const timesheetSelect = qs('timesheetEmployee');
@@ -221,6 +225,7 @@ function editEmployee(id) {
   qs('empRate').value = Number(e.compensationRate ?? e.hourlyRate ?? 0);
   qs('empLunch').value = Number(e.lunchMinutes || 0);
   qs('empAdvance').value = Number(e.advanceBalance || 0);
+  if (qs('empHolidayEntitlement')) qs('empHolidayEntitlement').value = Number(e.holidayEntitlementDays ?? 20);
   qs('empCompType').value = e.compensationType || e.payType || 'hourly';
   qs('empGeoRequired').checked = !!e.geoRequired;
   qs('empIsAdmin').checked = !!e.isAdmin;
@@ -251,7 +256,8 @@ async function saveEmployee() {
     isAdmin: qs('empIsAdmin').checked,
     mustClock: qs('empMustClock').checked,
     mustChangePin: qs('empMustChangePin').checked,
-    advanceBalance: Number(qs('empAdvance').value || 0)
+    advanceBalance: Number(qs('empAdvance').value || 0),
+    holidayEntitlementDays: Number(qs('empHolidayEntitlement').value || 20)
   };
   const url = id ? `/api/employees/${id}` : '/api/employees';
   const method = id ? 'PUT' : 'POST';
@@ -558,6 +564,69 @@ function downloadBackup() {
 }
 
 
+
+async function fetchHolidaysAdmin(showPopup = false) {
+  try {
+    const data = await apiJson('/api/admin/holidays');
+    holidaysAdminData = data;
+    safeSetText('holidayAdminYear', data.year || '');
+    const holidays = data.holidays || [];
+    safeSetText('holidayPendingCount', holidays.filter(h => h.status === 'pending').length);
+    safeSetText('holidayApprovedCount', holidays.filter(h => h.status === 'approved').length);
+    safeSetText('holidayLateCount', holidays.filter(h => h.status === 'pending' && h.lateRequest).length);
+    const balances = qs('holidayBalancesBody');
+    if (balances) balances.innerHTML = (data.employees || []).length ? data.employees.map(e => {
+      const b = e.holidayBalance || {};
+      return `<tr><td>${e.name}</td><td>${e.site || ''}</td><td>${b.entitlement ?? 20}</td><td>${b.approved ?? 0}</td><td>${b.pending ?? 0}</td><td><strong>${b.remaining ?? 0}</strong></td></tr>`;
+    }).join('') : '<tr><td colspan="6">No employees</td></tr>';
+    const body = qs('holidayRequestsBody');
+    if (body) body.innerHTML = holidays.length ? holidays.map(h => `
+      <tr>
+        <td>${h.name}</td><td>${h.startDate} → ${h.endDate}</td><td>${h.workingDays}</td>
+        <td>${h.lateRequest ? `<span class="badge out">LATE (${h.noticeDays}d)</span>` : (h.noticeDays == null ? 'Manual' : `${h.noticeDays} days`)}</td>
+        <td><span class="badge ${h.status === 'approved' ? 'in' : h.status === 'rejected' ? 'out' : ''}">${String(h.status).toUpperCase()}</span></td>
+        <td>${h.manual ? 'Manager manual' : 'Employee request'}</td>
+        <td class="action-links">
+          ${h.status === 'pending' ? `<button onclick="holidayDecision('${h.id}','approved')">Approve</button><button class="delete-btn" onclick="holidayDecision('${h.id}','rejected')">Reject</button>` : ''}
+          <button class="delete-btn" onclick="deleteHolidayRecord('${h.id}')">Delete</button>
+        </td>
+      </tr>
+    `).join('') : '<tr><td colspan="7">No holiday records</td></tr>';
+    const bank = qs('adminBankHolidays');
+    if (bank) bank.innerHTML = (data.bankHolidays || []).map(b => `<div class="stack-item"><strong>${b.date}</strong> — ${b.title}</div>`).join('') || '<div class="stack-empty">No bank holidays loaded.</div>';
+    const pending = holidays.filter(h => h.status === 'pending');
+    if (showPopup && pending.length) {
+      const lines = pending.slice(0, 12).map(h => `${h.name}: ${h.startDate} to ${h.endDate} (${h.workingDays} working day${h.workingDays === 1 ? '' : 's'})${h.lateRequest ? ' - LATE REQUEST' : ''}`);
+      alert(`Holiday requests waiting for approval:\n\n${lines.join('\\n')}${pending.length > 12 ? `\\n+ ${pending.length - 12} more` : ''}`);
+    }
+  } catch (err) {
+    if (qs('holidayManualMessage')) { qs('holidayManualMessage').style.color = '#ffb0a9'; qs('holidayManualMessage').textContent = err.message || 'Could not load holidays'; }
+  }
+}
+async function addManualHoliday() {
+  const payload = { employeeId: qs('holidayManualEmployee').value, startDate: qs('holidayManualStart').value, endDate: qs('holidayManualEnd').value, note: qs('holidayManualNote').value.trim() };
+  const msg = qs('holidayManualMessage');
+  if (!payload.employeeId || !payload.startDate || !payload.endDate) { msg.style.color = '#ffb0a9'; msg.textContent = 'Select employee and dates.'; return; }
+  msg.style.color = '#9cc2ff'; msg.textContent = 'Adding holiday...';
+  try {
+    const data = await apiJson('/api/admin/holidays/manual', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    msg.style.color = '#8ff0a4'; msg.textContent = `Added ${data.holiday.workingDays} working day(s).`;
+    qs('holidayManualStart').value = ''; qs('holidayManualEnd').value = ''; qs('holidayManualNote').value = '';
+    await fetchHolidaysAdmin();
+  } catch (err) { msg.style.color = '#ffb0a9'; msg.textContent = err.message || 'Could not add holiday'; }
+}
+async function holidayDecision(id, decision) {
+  const note = prompt(`${decision === 'approved' ? 'Approve' : 'Reject'} holiday. Optional manager note:`) || '';
+  try {
+    await apiJson(`/api/admin/holidays/${id}/decision`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ decision, note }) });
+    await fetchHolidaysAdmin();
+  } catch (err) { alert(err.message || 'Could not update holiday'); }
+}
+async function deleteHolidayRecord(id) {
+  if (!confirm('Delete this holiday record? This changes the employee holiday balance.')) return;
+  try { await apiJson(`/api/admin/holidays/${id}`, { method: 'DELETE' }); await fetchHolidaysAdmin(); } catch (err) { alert(err.message || 'Could not delete holiday'); }
+}
+
 async function fetchPushSubscriptions() {
   const select = qs('pushEmployee');
   const list = qs('pushDevicesList');
@@ -675,6 +744,7 @@ async function initAdmin() {
   await fetchDashboard();
   await fetchReport();
   await fetchPushSubscriptions();
+  await fetchHolidaysAdmin(true);
   await initMap();
 }
 
@@ -703,6 +773,8 @@ qs('refreshPushBtn').addEventListener('click', fetchPushSubscriptions);
 qs('clockInReminderBtn').addEventListener('click', () => sendReminder('clock-in'));
 qs('clockOutReminderBtn').addEventListener('click', () => sendReminder('clock-out'));
 qs('refreshTimesheetBtn').addEventListener('click', fetchTimesheet);
+qs('refreshHolidaysAdminBtn').addEventListener('click', () => fetchHolidaysAdmin(false));
+qs('addManualHolidayBtn').addEventListener('click', addManualHoliday);
 qs('logoutBtn').addEventListener('click', logoutAdmin);
 
 function logoutAdmin() {
@@ -751,3 +823,5 @@ window.deleteEmployee = deleteEmployee;
 window.editLog = editLog;
 window.deleteLog = deleteLog;
 window.prefillManualForDay = prefillManualForDay;
+window.holidayDecision = holidayDecision;
+window.deleteHolidayRecord = deleteHolidayRecord;

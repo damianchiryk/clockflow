@@ -35,6 +35,7 @@
 
         <div class="mobile-menu">
           <button class="menu-btn active" data-tab="clockTab">Clock</button>
+          <button class="menu-btn" data-tab="holidaysTab">Holidays</button>
           <button class="menu-btn" data-tab="documentsTab">Upload Document</button>
           <button class="menu-btn" data-tab="logsTab">Logs</button>
         </div>
@@ -48,6 +49,34 @@
           </div>
           <button class="btn btn-in" id="clockInBtn">Clock In</button>
           <button class="btn btn-out" id="clockOutBtn">Clock Out</button>
+        </div>
+
+
+        <div id="holidaysTab" class="mobile-tab">
+          <div class="holiday-balance-grid">
+            <div class="stats-card"><div class="small">Entitlement</div><div class="stats-value" id="holidayEntitlement">20</div><div class="small">working days</div></div>
+            <div class="stats-card"><div class="small">Approved / booked</div><div class="stats-value" id="holidayApproved">0</div><div class="small">working days</div></div>
+            <div class="stats-card"><div class="small">Pending</div><div class="stats-value" id="holidayPending">0</div><div class="small">working days</div></div>
+            <div class="stats-card"><div class="small">Holiday left</div><div class="stats-value" id="holidayRemaining">20</div><div class="small">working days</div></div>
+          </div>
+          <div class="panel compact-panel top-gap-small">
+            <h2>Book Holiday</h2>
+            <div class="site-note">Only working days are deducted. Saturdays, Sundays and England & Wales Bank Holidays are excluded. Requests with less than 10 calendar days' notice require manager approval and are marked as late requests.</div>
+            <label>First day of holiday</label><input id="holidayStart" type="date" />
+            <label>Last day of holiday</label><input id="holidayEnd" type="date" />
+            <label>Note (optional)</label><input id="holidayNote" type="text" placeholder="Optional note for manager" />
+            <div id="holidayPreview" class="site-note"></div>
+            <button class="btn btn-refresh" id="bookHolidayBtn" type="button" style="width:100%;margin-top:16px;">Request Holiday</button>
+            <div id="holidayMessage" class="message"></div>
+          </div>
+          <div class="panel compact-panel top-gap-small">
+            <div class="admin-header"><h2 style="margin:0;">My Holidays</h2><button class="btn btn-refresh slim-btn" id="refreshHolidaysBtn" type="button">Refresh</button></div>
+            <div id="myHolidaysList" class="stack-list"></div>
+          </div>
+          <div class="panel compact-panel top-gap-small">
+            <h2>Bank Holidays</h2>
+            <div id="bankHolidaysList" class="stack-list"></div>
+          </div>
         </div>
 
         <div id="documentsTab" class="mobile-tab">
@@ -80,6 +109,6 @@
       </div>
     </div>
   </div>
-  <script src="/mobile.js"></script>
+  <script src="/mobile.js?v=20260909holidays"></script>
 </body>
 </html>

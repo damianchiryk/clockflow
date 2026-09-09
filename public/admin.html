@@ -36,6 +36,7 @@
         <button class="btn btn-refresh slim-btn admin-nav-btn" data-view="employees">Employees</button>
         <button class="btn btn-refresh slim-btn admin-nav-btn" data-view="add">Add / Edit</button>
         <button class="btn btn-refresh slim-btn admin-nav-btn" data-view="timesheet">Timesheet</button>
+        <button class="btn btn-refresh slim-btn admin-nav-btn" data-view="holidays">Holidays</button>
         <button class="btn btn-refresh slim-btn admin-nav-btn" data-view="logs">Logs</button>
         <button class="btn btn-refresh slim-btn admin-nav-btn" data-view="failed">Failed</button>
         <button class="btn btn-refresh slim-btn admin-nav-btn" data-view="payroll">Payroll</button>
@@ -128,6 +129,8 @@
             <input id="empLunch" type="number" step="1" placeholder="0" />
             <label>Advance / deduction (£)</label>
             <input id="empAdvance" type="number" step="0.01" placeholder="0.00" />
+            <label>Annual paid holiday entitlement (working days)</label>
+            <input id="empHolidayEntitlement" type="number" step="0.5" min="0" value="20" />
             <div class="checks">
               <label class="check"><input id="empGeoRequired" type="checkbox" checked /> Geolocation required</label>
               <label class="check"><input id="empIsAdmin" type="checkbox" /> Admin profile</label>
@@ -180,6 +183,40 @@
               <div class="stack-empty">No timesheet loaded.</div>
             </div>
           </div>
+        </div>
+      </div>
+
+
+      <div class="admin-view" id="view-holidays">
+        <div class="today-stats top-gap">
+          <div class="stats-card"><div class="small">Pending requests</div><div class="stats-value" id="holidayPendingCount">0</div></div>
+          <div class="stats-card"><div class="small">Approved records</div><div class="stats-value" id="holidayApprovedCount">0</div></div>
+          <div class="stats-card"><div class="small">Late requests</div><div class="stats-value" id="holidayLateCount">0</div></div>
+          <div class="stats-card"><div class="small">Holiday year</div><div class="stats-value" id="holidayAdminYear">-</div></div>
+        </div>
+        <div class="admin-grid top-gap">
+          <div class="panel section-card">
+            <h2>Add Holiday Manually</h2>
+            <div class="site-note">Use this for holiday already taken before ClockFlow holiday tracking was introduced, or for a manager-approved manual entry. Only working days count.</div>
+            <label>Employee</label><select id="holidayManualEmployee"></select>
+            <label>First day</label><input id="holidayManualStart" type="date" />
+            <label>Last day</label><input id="holidayManualEnd" type="date" />
+            <label>Manager note</label><input id="holidayManualNote" type="text" placeholder="e.g. Holiday already used before system launch" />
+            <button class="btn btn-refresh" id="addManualHolidayBtn" type="button" style="width:100%;margin-top:16px;">Add Approved Holiday</button>
+            <div class="message" id="holidayManualMessage"></div>
+          </div>
+          <div class="panel section-card">
+            <div class="admin-header"><h2 style="margin:0;">Holiday Balances</h2><button class="btn btn-refresh slim-btn" id="refreshHolidaysAdminBtn" type="button">Refresh</button></div>
+            <div class="table-wrap"><table><thead><tr><th>Name</th><th>Site</th><th>Allowance</th><th>Approved</th><th>Pending</th><th>Left</th></tr></thead><tbody id="holidayBalancesBody"><tr><td colspan="6">No data</td></tr></tbody></table></div>
+          </div>
+        </div>
+        <div class="panel section-card top-gap">
+          <h2>Holiday Requests & History</h2>
+          <div class="table-wrap"><table><thead><tr><th>Employee</th><th>Dates</th><th>Working days</th><th>Notice</th><th>Status</th><th>Source</th><th>Actions</th></tr></thead><tbody id="holidayRequestsBody"><tr><td colspan="7">No holiday records</td></tr></tbody></table></div>
+        </div>
+        <div class="panel section-card top-gap">
+          <h2>England & Wales Bank Holidays</h2>
+          <div id="adminBankHolidays" class="stack-list"></div>
         </div>
       </div>
 
@@ -291,6 +328,6 @@
     </div>
   </div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="/admin.js?v=20260622payroll"></script>
+  <script src="/admin.js?v=20260909holidays"></script>
 </body>
 </html>
