@@ -22,6 +22,11 @@ const FAILED_FILE = path.join(DATA_DIR, 'failed_attempts.json');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const PUSH_SUBSCRIPTIONS_FILE = path.join(DATA_DIR, 'push_subscriptions.json');
 const VAPID_FILE = path.join(DATA_DIR, 'vapid.json');
+const HOLIDAYS_FILE = path.join(DATA_DIR, 'holidays.json');
+const NOTIFICATIONS_FILE = path.join(DATA_DIR, 'notifications.json');
+const BANK_HOLIDAYS_FILE = path.join(DATA_DIR, 'bank_holidays.json');
+const DEFAULT_HOLIDAY_ENTITLEMENT = 20;
+const CLOCK_GEOFENCE_METERS = 200;
 
 app.use(express.json({ limit: '25mb' }));
 app.use(express.static(PUBLIC_DIR));
@@ -116,6 +121,205 @@ function haversineMeters(lat1, lon1, lat2, lon2) {
   const dLon = toRad(lon2 - lon1);
   const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
   return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+
+function ymdToUtcDate(dateStr) {
+  const [y, m, d] = String(dateStr || '').split('-').map(Number);
+  if (![y, m, d].every(Number.isFinite)) return null;
+  return new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+}
+function ymd(date) {
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
+}
+function addUtcDays(date, days) {
+  const d = new Date(date);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d;
+}
+function easterSunday(year) {
+  const a = year % 19;
+  const b = Math.floor(year / 100);
+  const c = year % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31);
+  const day = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(Date.UTC(year, month - 1, day, 12));
+}
+function nthWeekdayOfMonth(year, monthIndex, weekday, nth) {
+  const d = new Date(Date.UTC(year, monthIndex, 1, 12));
+  const shift = (weekday - d.getUTCDay() + 7) % 7;
+  d.setUTCDate(1 + shift + (nth - 1) * 7);
+  return d;
+}
+function lastWeekdayOfMonth(year, monthIndex, weekday) {
+  const d = new Date(Date.UTC(year, monthIndex + 1, 0, 12));
+  const shift = (d.getUTCDay() - weekday + 7) % 7;
+  d.setUTCDate(d.getUTCDate() - shift);
+  return d;
+}
+function substituteIfWeekend(date) {
+  const day = date.getUTCDay();
+  if (day === 6) return addUtcDays(date, 2);
+  if (day === 0) return addUtcDays(date, 1);
+  return date;
+}
+function standardEnglandWalesBankHolidays(year) {
+  const events = [];
+  const push = (title, d) => events.push({ title, date: ymd(d) });
+  push("New Year's Day", substituteIfWeekend(new Date(Date.UTC(year, 0, 1, 12))));
+  const easter = easterSunday(year);
+  push('Good Friday', addUtcDays(easter, -2));
+  push('Easter Monday', addUtcDays(easter, 1));
+  push('Early May bank holiday', nthWeekdayOfMonth(year, 4, 1, 1));
+  push('Spring bank holiday', lastWeekdayOfMonth(year, 4, 1));
+  push('Summer bank holiday', lastWeekdayOfMonth(year, 7, 1));
+  const christmas = new Date(Date.UTC(year, 11, 25, 12));
+  const boxing = new Date(Date.UTC(year, 11, 26, 12));
+  if (christmas.getUTCDay() === 6) {
+    push('Boxing Day', new Date(Date.UTC(year, 11, 27, 12)));
+    push('Christmas Day', new Date(Date.UTC(year, 11, 28, 12)));
+  } else if (christmas.getUTCDay() === 0) {
+    push('Christmas Day', new Date(Date.UTC(year, 11, 27, 12)));
+    push('Boxing Day', new Date(Date.UTC(year, 11, 28, 12)));
+  } else if (boxing.getUTCDay() === 6) {
+    push('Christmas Day', christmas);
+    push('Boxing Day', new Date(Date.UTC(year, 11, 28, 12)));
+  } else if (boxing.getUTCDay() === 0) {
+    push('Christmas Day', christmas);
+    push('Boxing Day', new Date(Date.UTC(year, 11, 27, 12)));
+  } else {
+    push('Christmas Day', christmas);
+    push('Boxing Day', boxing);
+  }
+  return events.sort((a, b) => a.date.localeCompare(b.date));
+}
+function bankHolidayEventsForYear(year) {
+  const cached = readJson(BANK_HOLIDAYS_FILE, []);
+  const events = cached.filter(x => String(x.date || '').startsWith(`${year}-`));
+  return events.length ? events : standardEnglandWalesBankHolidays(year);
+}
+function bankHolidaySetForRange(startDate, endDate) {
+  const years = new Set();
+  for (let y = startDate.getUTCFullYear(); y <= endDate.getUTCFullYear(); y++) years.add(y);
+  const set = new Set();
+  for (const y of years) bankHolidayEventsForYear(y).forEach(e => set.add(e.date));
+  return set;
+}
+function workingDaysBetween(startStr, endStr) {
+  const start = ymdToUtcDate(startStr);
+  const end = ymdToUtcDate(endStr);
+  if (!start || !end || start > end) return 0;
+  const banks = bankHolidaySetForRange(start, end);
+  let count = 0;
+  for (let d = new Date(start); d <= end; d = addUtcDays(d, 1)) {
+    const day = d.getUTCDay();
+    const ds = ymd(d);
+    if (day !== 0 && day !== 6 && !banks.has(ds)) count++;
+  }
+  return count;
+}
+function daysUntilDate(startStr) {
+  const start = ymdToUtcDate(startStr);
+  const today = ymdToUtcDate(dateLondon(new Date()));
+  if (!start || !today) return 0;
+  return Math.floor((start - today) / 86400000);
+}
+function holidayEntitlement(employee) {
+  return toNumber(employee.holidayEntitlementDays, DEFAULT_HOLIDAY_ENTITLEMENT);
+}
+function holidayDaysInYear(holiday, year) {
+  if (holiday.status !== 'approved') return 0;
+  const start = holiday.startDate > `${year}-01-01` ? holiday.startDate : `${year}-01-01`;
+  const end = holiday.endDate < `${year}-12-31` ? holiday.endDate : `${year}-12-31`;
+  if (start > end) return 0;
+  return workingDaysBetween(start, end);
+}
+function holidayBalance(employee, year = Number(dateLondon(new Date()).slice(0, 4))) {
+  const holidays = readJson(HOLIDAYS_FILE, []).filter(h => h.employeeId === employee.id);
+  const entitlement = holidayEntitlement(employee);
+  const approved = holidays.filter(h => h.status === 'approved').reduce((sum, h) => sum + holidayDaysInYear(h, year), 0);
+  const pending = holidays.filter(h => h.status === 'pending').reduce((sum, h) => {
+    const start = h.startDate > `${year}-01-01` ? h.startDate : `${year}-01-01`;
+    const end = h.endDate < `${year}-12-31` ? h.endDate : `${year}-12-31`;
+    return sum + (start <= end ? workingDaysBetween(start, end) : 0);
+  }, 0);
+  return { year, entitlement, approved: Number(approved.toFixed(2)), pending: Number(pending.toFixed(2)), remaining: Number(Math.max(0, entitlement - approved).toFixed(2)) };
+}
+function addNotification(employeeId, type, message, meta = {}) {
+  const list = readJson(NOTIFICATIONS_FILE, []);
+  const item = { id: uid(), employeeId, type, message, meta, createdAt: new Date().toISOString(), readAt: null };
+  list.unshift(item);
+  writeJson(NOTIFICATIONS_FILE, list.slice(0, 5000));
+  return item;
+}
+function getUnreadNotifications(employeeId) {
+  return readJson(NOTIFICATIONS_FILE, []).filter(n => n.employeeId === employeeId && !n.readAt).slice(0, 20);
+}
+async function pushToAdminEmployees(title, message, url = '/admin.html') {
+  const employees = readJson(EMPLOYEES_FILE, []);
+  const adminIds = new Set(employees.filter(e => e.isAdmin).map(e => e.id));
+  const subscriptions = readJson(PUSH_SUBSCRIPTIONS_FILE, []).filter(s => adminIds.has(s.employeeId));
+  if (!subscriptions.length) return;
+  const payload = { title, body: message, url, icon: '/icon-192.png', badge: '/icon-192.png', timestamp: Date.now() };
+  await Promise.all(subscriptions.map(s => sendPushToRecord(s, payload)));
+}
+async function refreshBankHolidaysFromGov() {
+  try {
+    const response = await fetch('https://www.gov.uk/bank-holidays.json', { headers: { 'user-agent': 'ClockFlow/3.1' } });
+    if (!response.ok) return;
+    const data = await response.json();
+    const events = (data['england-and-wales']?.events || []).map(e => ({ title: e.title, date: e.date })).filter(e => /^\d{4}-\d{2}-\d{2}$/.test(e.date));
+    if (events.length) writeJson(BANK_HOLIDAYS_FILE, events);
+  } catch (_) {}
+}
+function migrateSiteRadii() {
+  const sites = readJson(SITES_FILE, []);
+  let changed = false;
+  sites.forEach(site => {
+    if (Number(site.radiusMeters) !== CLOCK_GEOFENCE_METERS) {
+      site.radiusMeters = CLOCK_GEOFENCE_METERS;
+      changed = true;
+    }
+  });
+  if (changed) writeJson(SITES_FILE, sites);
+}
+function runAutoClockOutSweep() {
+  const logs = readJson(LOGS_FILE, []);
+  const employees = readJson(EMPLOYEES_FILE, []);
+  const today = dateLondon(new Date());
+  const nowTime = timeLondon(new Date());
+  let changed = false;
+  for (const employee of employees) {
+    if (employee.mustClock === false) continue;
+    const mine = logs.filter(l => l.employeeId === employee.id).sort((a, b) => new Date(a.time) - new Date(b.time));
+    const last = mine[mine.length - 1];
+    if (!last || last.action !== 'in') continue;
+    const openDate = dateLondon(last.time);
+    const due = openDate < today || (openDate === today && nowTime >= '23:30:00');
+    if (!due) continue;
+    let autoTime;
+    try { autoTime = londonLocalToISOString(openDate, '13:00'); } catch { continue; }
+    logs.push(buildLogEntry({
+      employee,
+      action: 'out',
+      timeISO: autoTime,
+      geo: { required: false, allowed: true, distanceMeters: null, siteName: employee.site },
+      source: 'auto-clockout',
+      notes: 'Automatic Clock Out at 13:00 because employee did not clock out by 23:30.'
+    }));
+    addNotification(employee.id, 'missed-clockout', `You did not clock out on ${openDate}. ClockFlow automatically set your Clock Out to 13:00. Please speak to a manager if this needs correcting.`, { date: openDate, autoClockOut: '13:00' });
+    changed = true;
+  }
+  if (changed) writeJson(LOGS_FILE, logs);
 }
 
 function signAdminEmployeeToken(employeeId) {
@@ -357,16 +561,21 @@ function ensureSeed() {
   ensureDir(DATA_DIR);
   ensureDir(UPLOADS_DIR);
   ensureFile(SITES_FILE, [
-    { id: 'vrs-mechanical', name: 'VRS Mechanical', address: '91a, Thames Industrial Park, East Tilbury, Tilbury RM18 8RH', lat: 51.47873004008197, lng: 0.4137913929600394, radiusMeters: 50 },
-    { id: 'vrs-east-tilbury', name: 'VRS Bodyshop', address: '91a, Thames Industrial Park, East Tilbury, Tilbury RM18 8RH', lat: 51.47873004008197, lng: 0.4137913929600394, radiusMeters: 50 },
-    { id: 'alk-grays', name: 'ALK Bodyshop', address: 'Unit 7, Cliffside Estate, Grays RM17 5XR', lat: 51.4838239, lng: 0.3094763, radiusMeters: 50 }
+    { id: 'vrs-mechanical', name: 'VRS Mechanical', address: '91a, Thames Industrial Park, East Tilbury, Tilbury RM18 8RH', lat: 51.47873004008197, lng: 0.4137913929600394, radiusMeters: 200 },
+    { id: 'vrs-east-tilbury', name: 'VRS Bodyshop', address: '91a, Thames Industrial Park, East Tilbury, Tilbury RM18 8RH', lat: 51.47873004008197, lng: 0.4137913929600394, radiusMeters: 200 },
+    { id: 'alk-grays', name: 'ALK Bodyshop', address: 'Unit 7, Cliffside Estate, Grays RM17 5XR', lat: 51.4838239, lng: 0.3094763, radiusMeters: 200 }
   ]);
   ensureFile(EMPLOYEES_FILE, []);
   ensureFile(LOGS_FILE, []);
   ensureFile(FAILED_FILE, []);
   ensureFile(USERS_FILE, []);
   ensureFile(PUSH_SUBSCRIPTIONS_FILE, []);
+  ensureFile(HOLIDAYS_FILE, []);
+  ensureFile(NOTIFICATIONS_FILE, []);
+  ensureFile(BANK_HOLIDAYS_FILE, []);
   setupWebPush();
+  migrateSiteRadii();
+  refreshBankHolidaysFromGov();
 }
 ensureSeed();
 
@@ -411,7 +620,8 @@ app.post('/api/employees', adminOnly, (req, res) => {
     mustClock: body.mustClock === undefined ? true : Boolean(body.mustClock),
     mustChangePin: Boolean(body.mustChangePin),
     advanceBalance: toNumber(body.advanceBalance, 0),
-    documents: []
+    documents: [],
+    holidayEntitlementDays: toNumber(body.holidayEntitlementDays, DEFAULT_HOLIDAY_ENTITLEMENT)
   };
   employees.push(employee);
   writeJson(EMPLOYEES_FILE, employees);
@@ -445,7 +655,8 @@ app.put('/api/employees/:id', adminOnly, (req, res) => {
     mustClock: body.mustClock === undefined ? current.mustClock : Boolean(body.mustClock),
     mustChangePin: body.mustChangePin === undefined ? current.mustChangePin : Boolean(body.mustChangePin),
     advanceBalance: toNumber(body.advanceBalance ?? current.advanceBalance, current.advanceBalance),
-    documents: Array.isArray(current.documents) ? current.documents : []
+    documents: Array.isArray(current.documents) ? current.documents : [],
+    holidayEntitlementDays: toNumber(body.holidayEntitlementDays ?? current.holidayEntitlementDays, DEFAULT_HOLIDAY_ENTITLEMENT)
   };
   employees[idx] = next;
   writeJson(EMPLOYEES_FILE, employees);
@@ -467,13 +678,17 @@ function recordFailedAttempt(payload) {
 }
 
 app.post('/api/mobile-login', (req, res) => {
+  runAutoClockOutSweep();
   const { login, pin } = req.body || {};
   const employee = authenticateEmployee(login, pin);
   if (!employee) return res.status(401).json({ error: 'Invalid login or PIN' });
   const logs = readJson(LOGS_FILE, []);
   const state = getEmployeeCurrentState(employee.id, logs);
-  const response = { success: true, employee: employeeSafe(employee), state };
-  if (employee.isAdmin) response.adminToken = signAdminEmployeeToken(employee.id);
+  const response = { success: true, employee: employeeSafe(employee), state, holidayBalance: holidayBalance(employee), notifications: getUnreadNotifications(employee.id) };
+  if (employee.isAdmin) {
+    response.adminToken = signAdminEmployeeToken(employee.id);
+    response.pendingHolidayRequests = readJson(HOLIDAYS_FILE, []).filter(h => h.status === 'pending');
+  }
   res.json(response);
 });
 
@@ -516,6 +731,128 @@ app.post('/api/documents/upload', (req, res) => {
   employees[idx].documents.unshift(doc);
   writeJson(EMPLOYEES_FILE, employees);
   res.json({ success: true, document: doc });
+});
+
+
+app.get('/api/holidays/bank-holidays', (req, res) => {
+  const year = Number(req.query.year || dateLondon(new Date()).slice(0, 4));
+  res.json({ year, region: 'england-and-wales', events: bankHolidayEventsForYear(year) });
+});
+
+app.get('/api/holidays/mine', (req, res) => {
+  const { employeeId, pin } = req.query;
+  const employee = authenticateEmployeeById(employeeId, pin);
+  if (!employee) return res.status(401).json({ error: 'Unauthorized' });
+  const year = Number(req.query.year || dateLondon(new Date()).slice(0, 4));
+  const holidays = readJson(HOLIDAYS_FILE, []).filter(h => h.employeeId === employee.id).sort((a, b) => b.startDate.localeCompare(a.startDate));
+  res.json({ balance: holidayBalance(employee, year), holidays, bankHolidays: bankHolidayEventsForYear(year) });
+});
+
+app.post('/api/holidays/request', async (req, res) => {
+  const { employeeId, pin, startDate, endDate, note = '' } = req.body || {};
+  const employee = authenticateEmployeeById(employeeId, pin);
+  if (!employee) return res.status(401).json({ error: 'Unauthorized' });
+  const start = ymdToUtcDate(startDate);
+  const end = ymdToUtcDate(endDate);
+  const today = dateLondon(new Date());
+  if (!start || !end || start > end) return res.status(400).json({ error: 'Invalid holiday dates' });
+  if (startDate < today) return res.status(400).json({ error: 'Employees cannot request holiday in the past. Please speak to a manager.' });
+  const workingDays = workingDaysBetween(startDate, endDate);
+  if (workingDays <= 0) return res.status(400).json({ error: 'The selected period contains no working days.' });
+  const holidays = readJson(HOLIDAYS_FILE, []);
+  const overlap = holidays.some(h => h.employeeId === employee.id && h.status !== 'rejected' && startDate <= h.endDate && endDate >= h.startDate);
+  if (overlap) return res.status(400).json({ error: 'This request overlaps an existing holiday request.' });
+  const year = Number(startDate.slice(0, 4));
+  const balance = holidayBalance(employee, year);
+  if (workingDays > balance.remaining) return res.status(400).json({ error: `Not enough holiday remaining. Available: ${balance.remaining} day(s).` });
+  const noticeDays = daysUntilDate(startDate);
+  const item = {
+    id: uid(), employeeId: employee.id, name: employee.name, site: employee.site,
+    startDate, endDate, workingDays, status: 'pending', lateRequest: noticeDays < 10,
+    noticeDays, requestedAt: new Date().toISOString(), requestedBy: 'employee', note: sanitizeText(note),
+    decisionAt: null, decisionBy: null, decisionNote: ''
+  };
+  holidays.unshift(item);
+  writeJson(HOLIDAYS_FILE, holidays);
+  pushToAdminEmployees('Holiday Request', `${employee.name} requested ${workingDays} working day(s): ${startDate} to ${endDate}${item.lateRequest ? ' — LESS THAN 10 DAYS NOTICE' : ''}`, '/admin.html').catch(() => {});
+  res.json({ success: true, holiday: item, balance: holidayBalance(employee, year) });
+});
+
+app.post('/api/notifications/:id/read', (req, res) => {
+  const { employeeId, pin } = req.body || {};
+  const employee = authenticateEmployeeById(employeeId, pin);
+  if (!employee) return res.status(401).json({ error: 'Unauthorized' });
+  const list = readJson(NOTIFICATIONS_FILE, []);
+  const idx = list.findIndex(n => n.id === req.params.id && n.employeeId === employee.id);
+  if (idx === -1) return res.status(404).json({ error: 'Notification not found' });
+  list[idx].readAt = new Date().toISOString();
+  writeJson(NOTIFICATIONS_FILE, list);
+  res.json({ success: true });
+});
+
+app.get('/api/admin/holidays', adminOnly, (req, res) => {
+  const employees = readJson(EMPLOYEES_FILE, []);
+  const holidays = readJson(HOLIDAYS_FILE, []).sort((a, b) => b.requestedAt.localeCompare(a.requestedAt));
+  const year = Number(req.query.year || dateLondon(new Date()).slice(0, 4));
+  res.json({
+    year,
+    holidays,
+    bankHolidays: bankHolidayEventsForYear(year),
+    employees: employees.map(e => ({ ...employeeSafe(e), holidayBalance: holidayBalance(e, year) }))
+  });
+});
+
+app.post('/api/admin/holidays/manual', adminOnly, (req, res) => {
+  const { employeeId, startDate, endDate, note = '' } = req.body || {};
+  const employees = readJson(EMPLOYEES_FILE, []);
+  const employee = employees.find(e => e.id === employeeId);
+  if (!employee) return res.status(404).json({ error: 'Employee not found' });
+  const start = ymdToUtcDate(startDate), end = ymdToUtcDate(endDate);
+  if (!start || !end || start > end) return res.status(400).json({ error: 'Invalid holiday dates' });
+  const workingDays = workingDaysBetween(startDate, endDate);
+  if (workingDays <= 0) return res.status(400).json({ error: 'The selected period contains no working days.' });
+  const holidays = readJson(HOLIDAYS_FILE, []);
+  const item = {
+    id: uid(), employeeId: employee.id, name: employee.name, site: employee.site,
+    startDate, endDate, workingDays, status: 'approved', lateRequest: false, noticeDays: null,
+    requestedAt: new Date().toISOString(), requestedBy: 'manager', manual: true,
+    note: sanitizeText(note), decisionAt: new Date().toISOString(), decisionBy: 'manager', decisionNote: 'Added manually by manager'
+  };
+  holidays.unshift(item);
+  writeJson(HOLIDAYS_FILE, holidays);
+  addNotification(employee.id, 'holiday-approved', `A manager added ${workingDays} working day(s) of holiday: ${startDate} to ${endDate}.`, { holidayId: item.id });
+  res.json({ success: true, holiday: item, balance: holidayBalance(employee, Number(startDate.slice(0, 4))) });
+});
+
+app.post('/api/admin/holidays/:id/decision', adminOnly, (req, res) => {
+  const { decision, note = '' } = req.body || {};
+  if (!['approved', 'rejected'].includes(decision)) return res.status(400).json({ error: 'Decision must be approved or rejected' });
+  const holidays = readJson(HOLIDAYS_FILE, []);
+  const idx = holidays.findIndex(h => h.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'Holiday request not found' });
+  const item = holidays[idx];
+  const employee = readJson(EMPLOYEES_FILE, []).find(e => e.id === item.employeeId);
+  if (!employee) return res.status(404).json({ error: 'Employee not found' });
+  if (decision === 'approved') {
+    const bal = holidayBalance(employee, Number(item.startDate.slice(0, 4)));
+    if (item.workingDays > bal.remaining) return res.status(400).json({ error: `Cannot approve: employee has only ${bal.remaining} holiday day(s) remaining.` });
+  }
+  item.status = decision;
+  item.decisionAt = new Date().toISOString();
+  item.decisionBy = 'manager';
+  item.decisionNote = sanitizeText(note);
+  holidays[idx] = item;
+  writeJson(HOLIDAYS_FILE, holidays);
+  addNotification(employee.id, decision === 'approved' ? 'holiday-approved' : 'holiday-rejected', `Your holiday request ${item.startDate} to ${item.endDate} has been ${decision}.${note ? ` Manager note: ${sanitizeText(note)}` : ''}`, { holidayId: item.id });
+  res.json({ success: true, holiday: item, balance: holidayBalance(employee, Number(item.startDate.slice(0, 4))) });
+});
+
+app.delete('/api/admin/holidays/:id', adminOnly, (req, res) => {
+  const holidays = readJson(HOLIDAYS_FILE, []);
+  const next = holidays.filter(h => h.id !== req.params.id);
+  if (next.length === holidays.length) return res.status(404).json({ error: 'Holiday record not found' });
+  writeJson(HOLIDAYS_FILE, next);
+  res.json({ success: true });
 });
 
 app.post('/api/clock', (req, res) => {
@@ -808,5 +1145,9 @@ app.get('/api/admin/backup/download', adminOnly, (req, res) => {
     if (!res.headersSent) res.status(500).json({ error: err.message });
   });
 });
+
+setTimeout(runAutoClockOutSweep, 2000);
+setInterval(runAutoClockOutSweep, 60 * 1000);
+setInterval(refreshBankHolidaysFromGov, 24 * 60 * 60 * 1000);
 
 app.listen(PORT, '0.0.0.0', () => console.log(`ClockFlow running on 0.0.0.0:${PORT}`));

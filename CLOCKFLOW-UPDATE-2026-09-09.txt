@@ -1,0 +1,31 @@
+CLOCKFLOW UPDATE - 09/09/2026
+
+Implemented:
+- Geofence / clock-in distance set to 200 metres for all sites, including migration of existing site records at startup.
+- Holiday module for all employees.
+- Default annual paid holiday entitlement: 20 working days.
+- Saturdays, Sundays and England & Wales Bank Holidays are excluded from holiday day calculations.
+- England & Wales Bank Holidays are refreshed from GOV.UK with a built-in fallback calendar.
+- Employee holiday screen: entitlement, approved/booked, pending and remaining days.
+- Employee holiday request form and history.
+- Requests with less than 10 calendar days notice are flagged LATE / approval required.
+- All employee holiday requests are manager approval workflow: Pending / Approved / Rejected.
+- Admin / manager Holidays screen with balances, requests, approval/rejection and bank holiday list.
+- Managers can manually add approved historical or future holiday for employees already having used leave.
+- Existing employees without a stored entitlement automatically use 20 working days.
+- Admin employee profile now allows entitlement to be adjusted per employee.
+- Managers receive a holiday-request popup when logging in while requests are pending.
+- Admin employees with push notifications enabled receive a push when a new holiday request is submitted.
+- Missed Clock Out sweep runs automatically. If someone is still clocked in at 23:30, ClockFlow inserts Clock Out at 13:00 for that work date.
+- If the server was restarted after midnight, the sweep also closes older open sessions.
+- Employee receives a login warning after an automatic missed Clock Out and is told to speak to a manager.
+- Automatic Clock Out entries are clearly marked source: auto-clockout and include a review note.
+- Holiday data, notifications and cached bank holidays are included in normal ClockFlow backup because they live in DATA_DIR.
+
+Current holiday-year rule:
+- Calendar year, 1 January to 31 December.
+
+Deployment:
+- Replace/update the GitHub repository files and push to main.
+- Railway is already configured for automatic deploys from main.
+- The existing Railway data volume is preserved; new JSON data files are created automatically if missing.
